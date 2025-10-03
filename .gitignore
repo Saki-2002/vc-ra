@@ -1,0 +1,19 @@
+# Ignorar todos los node_modules
+node_modules/
+
+# Ignorar builds de React
+Client/dist/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archivos de entorno
+.env
+.env.local
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
