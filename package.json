@@ -1,0 +1,20 @@
+{
+  "name": "vc-ra",
+  "private": true,
+  "scripts": {
+    "client": "npm run dev --prefix client",
+    "server": "npm start --prefix server",
+    "dev": "concurrently \"npm run client\" \"npm run server\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.14",
+    "mediasoup": "^3.19.3",
+    "mediasoup-client": "^3.16.7",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "tailwindcss": "^4.1.14"
+  }
+}
