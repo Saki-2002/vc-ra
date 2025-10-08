@@ -20,7 +20,7 @@ function LocalVideo({stream}) {
   return (
     <div
       ref={localContainerRef}
-      className="absolute top-[20px] left-[20px] w-[180px] h-[180px] cursor-move flex flex-col items-center justify-start border-2 border-dashed border-gray-700 rounded-md bg-red-500 overflow-hidden p-[5px]"
+  className="absolute top-[20px] left-[20px] w-[180px] h-[180px] cursor-move flex flex-col items-center justify-start border-2 border-dashed border-gray-700 rounded-md bg-red-500 overflow-hidden p-[5px] z-50"
       onMouseDown={(e) => {
         const move = (ev) => drag(ev);
         window.addEventListener("mousemove", move);

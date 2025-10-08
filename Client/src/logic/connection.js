@@ -2,25 +2,26 @@ import { useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 import * as mediasoupClient from "mediasoup-client"
 
-export function useConnection(roomId) {
 
+export function useConnection(roomId) {
     const [isConnected, setIsConnected] = useState(false)
     const socketRef = useRef(null)
     const [localStream, setLocalStream] = useState(null)
     const [remoteStreams, setRemoteStreams] = useState([])
     const deviceRef = useRef(null)
     const producerTransportRef = useRef(null)
+    const consumerTransportRef = useRef(null)
+    // Guardar los consumers remotos para poder cerrarlos
+    const remoteConsumersRef = useRef({})
 
 
     useEffect(() => {
-
         socketRef.current = io("http://localhost:5000")
         const socket = socketRef.current
 
         socket.on("connect", () => {
             console.log("Conectado al servidor")
             setIsConnected(true)
-
             socket.emit("joinRoom", { roomId }, async ({ rtpCapabilities, error }) => {
                 if (error) return console.error(error);
                 await initDevice(rtpCapabilities)
@@ -33,28 +34,77 @@ export function useConnection(roomId) {
         })
 
         socket.on("newProducer", async ({producerId, kind, producerSocketId}) => {
-            console.log("AA")
-            if(!deviceRef.current || !producerTransportRef.current) return;
-
-            try {
-                const consumer = await producerTransportRef.current.consume({
-                    producerId,
-                    rtpCapabilities: deviceRef.current.rtpCapabilities,
-                    paused: false,
-                })
-
-                const stream = new MediaStream()
-                stream.addTrack(consumer.track)
-
-                setRemoteStreams(prev => [
-                    ...prev,
-                    {userId: producerSocketId, stream}
-                ])
-                console.log("Consumido nuevo producer: ", producerId)
-            } catch (err) {
-                console.error("Error consumiedo producer.", err)
+            if(!deviceRef.current) return;
+            // Crear consumerTransport si no existe
+            if(!consumerTransportRef.current) {
+                await createConsumerTransport();
             }
-        })
+            try {
+                // Solicitar datos de consumo al servidor
+                socket.emit("consume", {
+                    producerId,
+                    rtpCapabilities: deviceRef.current.rtpCapabilities
+                }, async ({id, kind, rtpParameters, error}) => {
+                    if(error) return console.error("Error en consume:", error);
+                    // Crear el consumer en el cliente
+                    const consumer = await consumerTransportRef.current.consume({
+                        id,
+                        producerId,
+                        kind,
+                        rtpParameters
+                    });
+                    // Guardar el consumer para poder cerrarlo después
+                    remoteConsumersRef.current[producerId] = consumer;
+                    const stream = new MediaStream();
+                    stream.addTrack(consumer.track);
+                    setRemoteStreams(prev => {
+                        // Evitar duplicados por producerId
+                        if (prev.some(s => s.producerId === producerId)) return prev;
+                        return [
+                            ...prev,
+                            {userId: producerSocketId, stream, producerId}
+                        ];
+                    });
+                    console.log("Consumido nuevo producer: ", producerId);
+                });
+            } catch (err) {
+                console.error("Error consumiendo producer.", err);
+            }
+        });
+
+        // Eliminar streams remotos y cerrar consumers cuando un usuario se desconecta
+        socket.on("removeProducer", ({ userId }) => {
+            setRemoteStreams(prev => {
+                // Cerrar los consumers asociados a ese userId
+                prev.forEach(s => {
+                    if (s.userId === userId && remoteConsumersRef.current[s.producerId]) {
+                        try {
+                            remoteConsumersRef.current[s.producerId].close();
+                        } catch (e) {}
+                        delete remoteConsumersRef.current[s.producerId];
+                    }
+                });
+                return prev.filter(s => s.userId !== userId);
+            });
+        });
+        async function createConsumerTransport() {
+            return new Promise((resolve, reject) => {
+                socket.emit("createTransport", async (transportOptions) => {
+                    try {
+                        const transport = deviceRef.current.createRecvTransport(transportOptions);
+                        consumerTransportRef.current = transport;
+                        transport.on("connect", ({dtlsParameters}, callback, errback) => {
+                            socket.emit("connectTransport", {transportId: transport.id, dtlsParameters }, (res) => {
+                                res?.error ? errback(res.error) : callback();
+                            });
+                        });
+                        resolve();
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+            });
+        }
 
         async function initDevice(routerRtpCapabilities) {
             try {
@@ -108,12 +158,18 @@ export function useConnection(roomId) {
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop())
             }
+            // Cerrar todos los consumers remotos al desmontar
+            Object.values(remoteConsumersRef.current).forEach(consumer => {
+                try { consumer.close(); } catch (e) {}
+            });
+            remoteConsumersRef.current = {};
         }
     }, [roomId])
 
     return {
         isConnected,
         localStream,
-        remoteStreams
+        remoteStreams,
+        socketRef
     }
 }

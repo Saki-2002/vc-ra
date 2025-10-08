@@ -1,15 +1,13 @@
-import { useEffect,useRef } from "react"
-import { normalizeModuleId } from "vite/module-runner"
+import { useEffect, useRef } from "react";
 
-function RemoteVideo (stream, userId){
-
-    const videoRef = useRef(null)
+function RemoteVideo({ stream, userId }) {
+    const videoRef = useRef(null);
 
     useEffect(() => {
-        if(videoRef.current && stream){
-            videoRef.current.srcObject = stream
+        if (videoRef.current && stream instanceof MediaStream) {
+            videoRef.current.srcObject = stream;
         }
-    }, [stream])
+    }, [stream]);
 
     return (
         <div className="w-[180px] h-[180px] border-2 border-gray-500 rounded-md overflow-hidden m-2">
@@ -21,7 +19,7 @@ function RemoteVideo (stream, userId){
                 className="w-full h-full object-cover"
             />
         </div>
-    )
+    );
 }
 
-export default RemoteVideo
+export default RemoteVideo;

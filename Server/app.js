@@ -75,30 +75,22 @@ io.on("connection", (socket) => {
       callback({rtpCapabilities: router.rtpCapabilities})
       console.log(`Cliente ${socket.id} se unió a la sala ${roomId}`)
 
-      //Obtener todos los producers automatico
+      // Obtener todos los producers existentes en la sala y enviarlos al nuevo cliente
+      const otherSockets = Array.from(io.sockets.adapter.rooms.get(roomId) || [])
+        .filter(id => id !== socket.id);
 
-      //Obtiene los sockets conectados a la sala y lo añade al Array otherSockets
-      //.filter filtra los resultados para excluir al cliente recién conectado
-     /* const otherSockets = Array.from(io.sockets.adapter.rooms.get(roomId) || [])
-        .filter(id => id!== socket.id);
-
-      //Se itera por todos los otros sockets
       for (let otherId of otherSockets) {
-        const otherSocket = io.sockets.sockets.get(otherId)
-        console.log("TESTEO")
-        console.log(otherId)
-        console.log(otherSocket)
-        console.log(otherSocket.producers)
+        const otherSocket = io.sockets.sockets.get(otherId);
         if (otherSocket && otherSocket.producers) {
           for (let producer of otherSocket.producers) {
             socket.emit("newProducer", {
               producerId: producer.id,
               kind: producer.kind,
               producerSocketId: otherSocket.id
-            })
+            });
           }
         }
-      }*/
+      }
 
     } catch (err) {
       console.error("Error al unir cliente a la sala", err)
@@ -156,6 +148,12 @@ io.on("connection", (socket) => {
   })
 
 
+  // Evento colaborativo de texto
+  socket.on("textUpdate", ({ roomId, text }) => {
+    // Reenviar el texto a todos los clientes de la sala excepto el que lo envió
+    socket.to(roomId).emit("textUpdate", { text });
+  });
+
   //Evento cuando un cliente quiere producir audio o video
   //kind -> "audio" o "video"   rtpParameters -> Parametros de como enviar media al server
   socket.on("produce", async ({kind, rtpParameters}, callback) => {
@@ -182,32 +180,33 @@ io.on("connection", (socket) => {
     }
   })
 
-  socket.on("consume", async ({producerId}, callback) => {
-    try{
-      const router = routers.get(socket.roomId)
-      const transport = socket.transport
-      if(!transport) throw new Error("Transport no creado");
+  socket.on("consume", async ({producerId, rtpCapabilities}, callback) => {
+      try{
+        const router = routers.get(socket.roomId)
+        const transport = socket.transport
+        if(!transport) throw new Error("Transport no creado");
 
-      const consumer = await transport.consume({
-        producerId,
-        rtpCapabilities: router.rtpCapabilities,
-        paused: false,
-      })
+        // Usar las rtpCapabilities del cliente
+        const consumer = await transport.consume({
+          producerId,
+          rtpCapabilities,
+          paused: false,
+        })
 
-      callback({
-        id: consumer.id,
-        producerId: producerId,
-        kind: consumer.kind,
-        rtpParameters: consumer.rtpParameters
-      })
+        callback({
+          id: consumer.id,
+          producerId: producerId,
+          kind: consumer.kind,
+          rtpParameters: consumer.rtpParameters
+        })
 
-      console.log(`Cliente ${socket.id} está consumiendo Producer ${producerId}`)
+        console.log(`Cliente ${socket.id} está consumiendo Producer ${producerId}`)
 
-    } catch(err) {
-      console.error("Error al crear Consumer", err)
-      callback({error: err.message})
-    }
-  })
+      } catch(err) {
+        console.error("Error al crear Consumer", err)
+        callback({error: err.message})
+      }
+    })
 
   socket.on("disconnect",() => {
     if(socket.producers){
@@ -217,6 +216,9 @@ io.on("connection", (socket) => {
     if(socket.transport){
       socket.transport.close()
     }
+
+    // Notificar a los demás clientes que este usuario se desconectó
+    socket.to(socket.roomId).emit("removeProducer", { userId: socket.id });
 
     console.log(`El cliente ${socket.id} se ha desconectado de la sala ${socket.roomId}`)
   })
