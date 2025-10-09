@@ -1,13 +1,19 @@
 import { useEffect,useRef } from "react"
-import { normalizeModuleId } from "vite/module-runner"
 
-function RemoteVideo (stream, userId){
+function RemoteVideo ({stream}){
 
     const videoRef = useRef(null)
 
     useEffect(() => {
         if(videoRef.current && stream){
-            videoRef.current.srcObject = stream
+            if(stream instanceof MediaStream){
+                videoRef.current.srcObject = stream
+                videoRef.current.play().catch(err => {
+                    console.warn("No se pudo auto Play:", err)
+                })
+            } else {
+                console.warn("Stream Inválido", stream)
+            }
         }
     }, [stream])
 
