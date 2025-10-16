@@ -1,17 +1,22 @@
 import mediasoup from "mediasoup"
-import { generateProducerRemoteParameters } from "mediasoup-client/fakeParameters"
 
 let worker //Se crea uno solo
-let rooms = {} //Tiene un Router y una lista de peers
-let peers = {} //Tiene el socket, roomName,
-// transports, producers,consumers, y peerDetails
+let rooms = {}
+//rooms: [room1, room2, room3 ...]
+//room1: {Router, peers[user1, user2 ...]}
+let peers = {}
+// peers: [user1, user2, user3]
+//user1: socket, roomId, transports[], consumers[], producers[],
+//peerDetails {username, isHost}
 let transports = [] // Listado de transportes
 let producers = [] //Listado de producers
 let consumers = [] //Listado de consumers
 
+//====================
+// CONSTANTES GLOBALES
+//====================
 
-
-//Configuración de MediaCodecs
+//MEDIACODECS
 const mediaCodecs = [
     {
         kind: "audio",
@@ -26,14 +31,35 @@ const mediaCodecs = [
     }
 ]
 
+//WEBRTCTRANSPORTS_OPTIONS
+const webRtcTransport_options = {
+    listenIps: [
+        {
+            ip: "0.0.0.0",
+            announcedIp: "127.0.0.1"
+        }
+    ],
+    enableUdp: true,
+    enableTcp: true,
+    preferUdp: true
+}
 
-//Función para crear un Worker
+//====================
+// FUNCIONES GLOBALES
+//====================
+
+
+// CREAR WORKER
+// Entrada: None
+// Funcionamiento: Función async que crea un Worker
+// que corresponde a uno por CPU
+// Salida: Worker
 const createWorker = async () => {
-    //Crea un worker con mediasoup
+    //Crea un Worker
     worker = await mediasoup.createWorker({
-        //Nivel de logs: adventerncias
+        //Nivel de logs: Adventencias
         logLevel: "warn",
-        //Puertos UDP que se utilizarán
+        //Puertos UDP que se utilizarán (200 puertos)
         rtcMinPort: 2000,
         rtcMaxPort: 2199
     })
@@ -41,51 +67,50 @@ const createWorker = async () => {
     //Se define un listener cuando ha muerto el worker
     worker.on("died", error => {
         console.error("Worker de mediasoup a muerto", error)
-        //Se exitea de la applicación
+        //Se sale de la app
         setTimeout(() => process.exit(1), 2000)
     })
-    //Devuelve el worker
     return worker
 }
 
-//Función para crear un webrtc transport
+// CREAR WEB RTC TRANSPORT
+// Entrada: Router
+// Funcionamiento: Función que crea un Transport para el servidor y
+// asociarlo con un producer o consumer
+// Salida: Transport
 const createWebRtcTransport = async (router) => {
     try {
-        const webRtcTransport_options = {
-            listenIps: [
-                {
-                    ip: "0.0.0.0",
-                    announcedIp: "127.0.0.1"
-                }
-            ],
-            enableUdp: true,
-            enableTcp: true,
-            preferUdp: true
-        }
 
         const transport = await router.createWebRtcTransport(webRtcTransport_options)
         console.log("Transport creado: ", transport.id)
 
         //Listeners
 
+        //Cuando se cierra el transport
         transport.on("close", () => {
             console.log("Transport closed")
         })
 
+        //Cuando se cierra el dtls (Permite el envio)
+        //Si closed, significa que no se permite más el envío,
+        //entonces no tiene sentido el transport y mejor se cierra
         transport.on("dtlsstatechange", dtlsState => {
             if (dtlsState === "closed") {
                 transport.close
             }
         })
-
         return transport
-
     } catch (error) {
         console.log("Ha ocurrido un error al crear el WebRtcTransport", error)
     }
 }
 
-//Función para quitar items de las listas
+//QUITAR ITEMS
+//Entrada: Lista (Items), socketId, tipo de lista
+//Funcionamiento: Permite quitar los elementos que contengan el
+//mismo socketId de una lista de transports, producers, o consumers
+//Salida: Lista filtrada. (!!!) Es necesario reasignar al llamar la
+//función. 
 const removeItems = (items, socketId, type) => {
     items.forEach(item => {
         if (item.socketId === socketId) {
@@ -102,8 +127,8 @@ const createRoom = async (roomId, socketId) => {
     let router
 
     if (rooms[roomId]) {
-        peers= rooms[roomId].peers || []
-        router= rooms[roomId].router
+        peers = rooms[roomId].peers || []
+        router = rooms[roomId].router
     } else {
         router = await worker.createRouter({ mediaCodecs })
     }
@@ -118,7 +143,7 @@ const createRoom = async (roomId, socketId) => {
 const addTransport = (socket, transport, roomId) => {
     transports = [
         ...transports,
-        {socketId: socket.id, transport, roomId}
+        { socketId: socket.id, transport, roomId }
     ]
 
     peers[socket.id] = {
@@ -133,7 +158,7 @@ const addTransport = (socket, transport, roomId) => {
 const addProducer = (socket, producer, roomId) => {
     producers = [
         ...producers,
-        {socketId: socket.id, producer, roomId}
+        { socketId: socket.id, producer, roomId }
     ]
     peers[socket.id] = {
         ...peers[socket.id],
@@ -147,7 +172,7 @@ const addProducer = (socket, producer, roomId) => {
 const addConsumer = (socket, consumer, roomId) => {
     consumers = [
         ...consumers,
-        {socketId: socket.id, consumer, roomId}
+        { socketId: socket.id, consumer, roomId }
     ]
 
     peers[socket.id] = {
@@ -208,25 +233,25 @@ async function handleVideoConference() {
 
             //Se crea la Room
             let router = await createRoom(roomId, socketId)
-            
+
             peers[socket.id] = {
                 socket,
                 roomId,
-                transports:[],
-                consumers:[],
-                producers:[],
-                peerDetails:{
-                    name:"",
+                transports: [],
+                consumers: [],
+                producers: [],
+                peerDetails: {
+                    name: "",
                     isAdmin: false,
                 }
             }
-            callback({rtpCapabilities: router.rtpCapabilities})
+            callback({ rtpCapabilities: router.rtpCapabilities })
         })
 
         socket.on("createWebRtcTransport", async (callback) => {
-            
-            roomId= peers[socket.id].roomId
-            router= rooms[roomId].router
+
+            roomId = peers[socket.id].roomId
+            router = rooms[roomId].router
             try {
                 const transport = await createWebRtcTransport(router)
                 callback({
@@ -240,7 +265,7 @@ async function handleVideoConference() {
                 addTransport(socket, transport, roomId)
             } catch (err) {
                 console.error("Hubo un error al crear el Transport", err)
-                callback({err})
+                callback({ err })
             }
         })
 
