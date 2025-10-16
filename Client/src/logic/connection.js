@@ -1,3 +1,14 @@
+    // Guardar referencia a los producers locales
+    const localProducersRef = useRef({});
+    // Función para desactivar audio o video
+    const disableMedia = (kind) => {
+        const producer = localProducersRef.current[kind];
+        if (producer) {
+            producer.close();
+            socketRef.current.emit("closeProducer", { kind });
+            delete localProducersRef.current[kind];
+        }
+    };
 import { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import * as mediasoupClient from "mediasoup-client"
@@ -147,9 +158,15 @@ export function useConnection(roomId) {
                     })
                 })
 
-                //Por cada track de stream ("audio, video"), se crea 
-                //un produce
-                stream.getTracks().forEach(track => transport.produce({ track }))
+                // Por cada track de stream ("audio, video"), se crea un producer y se guarda referencia
+                stream.getTracks().forEach(track => {
+                    const kind = track.kind;
+                    const producer = transport.produce({ track });
+                    // Guardar referencia para poder cerrarlo después
+                    localProducersRef.current[kind] = producer;
+                });
+    // Exponer la función para desactivar media
+    // Puedes usar disableMedia('audio') o disableMedia('video') desde el componente
             })
         }
 
@@ -197,6 +214,7 @@ export function useConnection(roomId) {
     return {
         isConnected,
         localStream,
-        remoteStreams
+        remoteStreams,
+        disableMedia // <-- exporta la función para usarla en la UI
     }
 }
