@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { useEffect } from 'react'
-import './App.css'
+import './index.css'
 import Main_Component from "./main-view/main-view.jsx"
+import Starting_View from './main-view/starting-view.jsx'
 
 function App() {
 
   return (
     <>
-    <div className= "w-full h-screen">
-      <Main_Component roomId= {"123"}/>
+    <div>
+      <Starting_View/>
     </div>
     </>
   )

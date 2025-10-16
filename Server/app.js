@@ -3,6 +3,7 @@ import express from "express"
 import http from "http"
 import mediasoup from "mediasoup"
 import { Server } from "socket.io"
+import handleVideoConference from "./videoConference"
 
 const app = express()
 const PORT = 5000
@@ -27,6 +28,15 @@ server.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
 
+
+//
+//
+//
+//handleVideoConference(io)
+//
+//
+//
+
 //CREACIÓN DE WORKER
 //Es uno por cada CPU del server. Con uno basta
 const worker = await mediasoup.createWorker({
@@ -37,6 +47,9 @@ const worker = await mediasoup.createWorker({
 
 
 //CREACIÓN DE ROUTERS (SALAS)
+
+
+
 
 //Se crea un Map de Routers, ya que son varios y representan las 
 //salas de videoconferencias

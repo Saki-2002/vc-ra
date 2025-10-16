@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import "../App.css";
-import { useConnection } from "../logic/connection";
+//import { useConnection } from "../logic/connection";
 import LocalVideo from "./local-video";
 import RemoteVideo from "./remote-video";
 //import TextEditor from "./text-editor";
