@@ -121,6 +121,10 @@ const removeItems = (items, socketId, type) => {
     return items
 }
 
+//CREAR ROOM
+//Entrada: RoomId y SocketId
+//Funcionamiento: Crea una Room y la añade a el array de las Room
+//Salida: Router (Para poder utilizarlo)
 const createRoom = async (roomId, socketId) => {
 
     let peers = []
@@ -140,6 +144,11 @@ const createRoom = async (roomId, socketId) => {
     return router
 }
 
+
+//AÑADIR TRANSPORT
+//Entrada: Socket, Transport, roomId
+//Funcionamiento: Añadir el transport creado a la lista de Transports
+//Salida: Ninguna, se añade directo en el Array original
 const addTransport = (socket, transport, roomId) => {
     transports = [
         ...transports,
@@ -186,16 +195,6 @@ const addConsumer = (socket, consumer, roomId) => {
 
 async function handleVideoConference() {
 
-    //Crear Media Codecs
-    //Crear Worker
-
-    //Crear Router según petición
-
-    //Crear transports para server
-    //Crear 2 transports producer x usuario
-
-    //Crear (2 * (Usuarios-1)) transports consumer x usuario
-
     worker = await createWorker()
 
     io.on("connection", socket => {
@@ -225,15 +224,15 @@ async function handleVideoConference() {
             }
         })
 
-
         socket.on("joinRoom", async (roomId, callback) => {
 
             socket.roomId = roomId
             socket.join(roomId)
 
-            //Se crea la Room
+            //Se crea la Room o la busca si ya existe
             let router = await createRoom(roomId, socketId)
 
+            //Se crea un usuario en el listado 
             peers[socket.id] = {
                 socket,
                 roomId,
@@ -269,6 +268,33 @@ async function handleVideoConference() {
             }
         })
 
+        socket.on("connectTransport", (dtlsParameters, callback) => {
+            try {
+                if (transports[socket.id]) {
+                    const transport = transports[socket.id].connect({ dtlsParameters })
+                    callback({
+                        id: transport.id,
+                        iceParameters: transport.iceParameters,
+                        iceCandidates: transport.iceCandidates,
+                        dtlsParameters: transport.dtlsParameters
+                    })
+                }
+                console.log("Conectado con transport: ", transport.id)
+            } catch (err) {
+                console.error("Error al intentar conectar con transport", err)
+            }
+        })
+
+        socket.on("produce", async (kind, rtpParameters, callback) => {
+            try {
+                if (transports[socket.id]) {
+                    const transport = transports[socket.id]
+                    const producer = await transport.produce({ kind, rtpParameters })
+                    addProducer(socket, producer, socket.roomId)
+                    callback(producer.id)
+                }
+            }
+        })
 
 
 
