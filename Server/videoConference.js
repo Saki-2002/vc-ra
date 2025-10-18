@@ -204,6 +204,13 @@ async function handleVideoConference(io) {
     worker = await createWorker()
 
     io.on("connection", socket => {
+        // Comentarios colaborativos: retransmitir a todos los usuarios de la sala
+        socket.on("comment-update", ({ roomId, comments }) => {
+            // Reenviar a todos los sockets de la sala excepto el emisor
+            socket.to(roomId).emit("comment-update", { roomId, comments })
+            // También enviar al propio emisor para asegurar sincronización local
+            socket.emit("comment-update", { roomId, comments })
+        })
         // Editor colaborativo: retransmitir code-update a la sala
         socket.on("code-update", ({ roomId, code }) => {
             // Reenviar a todos los sockets de la sala excepto el emisor

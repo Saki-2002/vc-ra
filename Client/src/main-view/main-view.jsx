@@ -81,7 +81,7 @@ function MainView({ roomId, username }) {
                 }
             })
         }
-    }, [roomId, username, joined, remotePeers])
+    }, [roomId, username, joined])
 
     // Guardar streams previos para evitar recrear MediaStream innecesariamente
     const prevStreamsRef = useRef({})
@@ -325,7 +325,7 @@ function MainView({ roomId, username }) {
 
     return (
         <div className="w-screen h-screen flex flex-col items-center justify-center bg-cyan-200">
-            <div className=" z-50 w-full h-[60vh] flex items-center justify-center mb-4">
+            <div className="z-50 w-full my-[200px] flex items-center justify-center mb-4">
                 <CodeEditor roomId={roomId} />
             </div>
             <div className="relative w-full h-full border border-blue-500">
