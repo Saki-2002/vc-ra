@@ -1,71 +1,35 @@
-
 import { useEffect, useRef, useState } from "react"
 import Draggable from "react-draggable"
 
-function LocalVideo({ stream }) {
-  const videoRef = useRef(null)
+function LocalVideo(ref) {
   const nodeRef = useRef(null)
-  const [videoEnabled, setVideoEnabled] = useState(true)
-  const [audioEnabled, setAudioEnabled] = useState(true)
-  // Enviar estado al servidor cuando cambie
-  useEffect(() => {
-    window.sendPeerState && window.sendPeerState({ videoEnabled, audioEnabled })
-  }, [videoEnabled, audioEnabled])
-
-  useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream
-      // Actualiza estado de tracks si el stream cambia
-      const videoTrack = stream.getVideoTracks()[0]
-      if (videoTrack) videoTrack.enabled = videoEnabled
-      const audioTrack = stream.getAudioTracks()[0]
-      if (audioTrack) audioTrack.enabled = audioEnabled
-    }
-  }, [stream, videoEnabled, audioEnabled])
-
-  const handleToggleVideo = () => {
-    if (stream) {
-      const videoTrack = stream.getVideoTracks()[0]
-      if (videoTrack) videoTrack.enabled = !videoEnabled
-      setVideoEnabled(!videoEnabled)
-    }
-  }
-
-  const handleToggleAudio = () => {
-    if (stream) {
-      const audioTrack = stream.getAudioTracks()[0]
-      if (audioTrack) audioTrack.enabled = !audioEnabled
-      setAudioEnabled(!audioEnabled)
-    }
-  }
 
   return (
     <Draggable nodeRef={nodeRef} bounds="parent" handle=".drag-handle">
-      <div ref={nodeRef} className=" drag-handle absolute top-[20px] left-[20px] w-[180px] h-[180px] flex flex-col items-center justify-start border-2 border-dashed border-gray-700 rounded-md bg-red-500 overflow-hidden p-[5px]">
-        <div className="w-full flex justify-end gap-2 mb-1">
-          <button
-            className={`px-2 py-1 rounded ${videoEnabled ? "bg-green-500" : "bg-gray-400"} text-white text-xs`}
-            onClick={handleToggleVideo}
-          >
-            {videoEnabled ? "Desactivar Video" : "Activar Video"}
-          </button>
-          <button
-            className={`px-2 py-1 rounded ${audioEnabled ? "bg-green-500" : "bg-gray-400"} text-white text-xs`}
-            onClick={handleToggleAudio}
-          >
-            {audioEnabled ? "Desactivar Audio" : "Activar Audio"}
-          </button>
-        </div>
-        <video
-          ref={videoRef}
-          autoPlay
-          muted
-          playsInline
-          className="w-full h-full object-cover"
-        />
+      <div
+        ref={nodeRef}
+        className=" z-50 absolute pointer-events-auto rounded-lg w-[300px] h-[250px] bg-gray-200 flex flex-col">
+          <div className="drag-handle cursor-grab bg-gray-600 w-full h-8 rounded-t-lg flex flex-col">
+          </div>
+          <div className="flex-1 flex flex-col items-stretch p-2 bg-green-500">
+            <div className="bg-red-500 m-1 flex-1 justify-end flex flex-col">
+              <div className="bg-purple-500 m-1 h-12 flex gap-4 items-center justify-center">
+                <button className="w-10 h-10 rounded-full bg-orange-500 hover:bg-orange-700 flex items-center justify-center text-xl">
+                  🎤
+                </button>
+                <button className="w-10 h-10 rounded-full bg-orange-500 hover:bg-orange-700 flex items-center justify-center text-xl">
+                  📽️
+                </button>
+            </div>
+            </div>
+            
+          </div>
+
       </div>
+
     </Draggable>
   )
+
 }
 
 export default LocalVideo

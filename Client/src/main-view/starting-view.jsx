@@ -1,106 +1,67 @@
 import { useRef, useState } from "react"
 import Draggable from "react-draggable"
-import PopUp_Entrar_Sala from "./popup-entrar-sala"
-import { joinRoom, getProducers } from "../logic/connection"
-import MainView from "./main-view"
+import * as handleConnection from "../logic/connection"
+import { useNavigate } from "react-router-dom"
 
 function Starting_View() {
-	const nodeRef = useRef(null)
-	const [renderPopUp, setRenderPopUp] = useState(false)
-	const [showPopUp, setShowPopUp] = useState(false)
-	const popUpRef = useRef(null)
-	const [idSala, setIdSala] = useState("")
-	const [error, setError] = useState("")
-	const [inRoom, setInRoom] = useState(false)
+
+	const navigate = useNavigate()
 	const [roomId, setRoomId] = useState("")
 	const [username, setUsername] = useState("")
 
-	const openPopUp = () => {
-		setRenderPopUp(true)
-		setTimeout(() => setShowPopUp(true), 10)
-	}
-	const closePopUp = () => {
-		setShowPopUp(false)
-		setTimeout(() => setRenderPopUp(false), 100)
-	}
-	const onMouseDown = () => {
-		// Puedes dejarlo para el draggable
+	const joinRoom = (roomId, username) => {
+		//Unirse a sala
+		handleConnection.joinRoom(roomId, username, false)
+		navigate(`/room/${roomId}`, { state: { username } })
 	}
 
-	// Ingresar a sala específica
-	const handleIngresarSala = (valor) => {
-		setError("")
-		joinRoom(valor, username || "Usuario", (response) => {
-			if (response?.error) {
-				setError("La sala no existe")
-			} else {
-				setRoomId(valor)
-				setInRoom(true)
-				window.history.pushState({}, '', `/${valor}`)
-			}
-		})
+	const createRoom = (username) => {
+		const roomId = createCode()
+		handleConnection.joinRoom(roomId, username, true)
+		navigate(`/room/${roomId}`, { state: { username } })
 	}
 
-	// Crear sala con ID automático
-	const handleCrearSala = () => {
-		setError("")
-		// Genera un ID aleatorio entre 1 y 9999
-		const newRoomId = Math.floor(Math.random() * 9999) + 1
-		joinRoom(newRoomId.toString(), username || "Usuario", (response) => {
-			if (response?.error) {
-				setError(response.error)
-			} else {
-				setRoomId(newRoomId.toString())
-				setInRoom(true)
-				window.history.pushState({}, '', `/${newRoomId}`)
-			}
-		})
-	}
-
-	if (inRoom) {
-		return <MainView roomId={roomId} username={username || "Usuario"} />
+	const createCode = () => {
+		const numero = Math.floor(Math.random()*10000)
+		return String(numero).padStart(4,"0")
 	}
 
 	return (
 		<>
-			<title>VC-AF</title>
-			<div className="flex flex-col items-center static w-screen h-screen bg-yellow-200">
-				<div className="py-10 align-middle place-items-center border-black ">
-					<input
-						type="text"
-						placeholder="Tu nombre"
-						value={username}
-						onChange={e => setUsername(e.target.value)}
-						className="mb-4 px-2 py-1 border rounded"
-					/>
-					<button
-						className="bg-blue-500 hover:bg-blue-700 text-white font-bold rounded-full py-2 px-4 mr-2"
-						onClick={openPopUp}
-					>
-						Ingresar a una sala especifica
-					</button>
-					<button
-						className="bg-green-500 hover:bg-green-700 text-white font-bold rounded-full py-2 px-4"
-						onClick={handleCrearSala}
-					>
-						Crear sala
-					</button>
+			<div className="bg-red-900 w-screen h-screen flex items-center justify-center">
+				<div className="flex flex-col gap-4">
+					<div className="flex gap-4">
+						<button
+							className="bg-green-500 hover:bg-green-700 px-4 py-2 rounded w-1/2"
+							onClick={() => createRoom(username)}>
+							Crear Sala
+						</button>
+						<button
+							className="bg-blue-500 hover:bg-blue-700 px-4 py-2 rounded w-1/2"
+							onClick={() => joinRoom(roomId, username)}>
+							Unirse a Sala
+						</button>
+					</div>
+					<div className="flex flex-col gap-2">
+						<input
+							type="text"
+							className="bg-white px-2 py-1 rounded w-80"
+							placeholder="Ingresa el Id de la Sala..."
+							value={roomId}
+							onChange={(e) => setRoomId(e.target.value)}
+						/>
+						<input
+							type="text"
+							className="bg-white px-2 py-1 rounded w-80"
+							placeholder="Ingresa tu nombre de Usuario..."
+							value={username}
+							onChange={(e) => setUsername(e.target.value)}
+						/>
+					</div>
 				</div>
-				{renderPopUp &&
-					<PopUp_Entrar_Sala
-						ref={popUpRef}
-						showPopUp={showPopUp}
-						onMouseDown={onMouseDown}
-						closePopUp={closePopUp}
-						onIngresarSala={handleIngresarSala}
-					/>
-				}
-				{error && (
-					<div className="mt-4 text-red-600">{error}</div>
-				)}
+
 			</div>
 		</>
 	)
 }
-
 export default Starting_View

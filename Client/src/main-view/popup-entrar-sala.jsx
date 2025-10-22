@@ -1,7 +1,21 @@
 import { useState, useRef, forwardRef } from "react"
 import Draggable from "react-draggable"
 
-function PopUp_Entrar_Sala({ onIngresarSala, showPopUp, onMouseDown, closePopUp }, ref) {
+const showPopUp = () => {
+
+}
+
+const onMouseDown = () => {
+
+}
+
+const closePopUp = () => {
+
+}
+
+
+
+function PopUp_Entrar_Sala(ref) {
     const [sala, setSala] = useState("")
 
     return (
@@ -29,12 +43,6 @@ function PopUp_Entrar_Sala({ onIngresarSala, showPopUp, onMouseDown, closePopUp 
                             onChange={(e) => setSala(e.target.value)}
                             className="border border-gray-400 px-3 w-full h-10 relative align-middle justify-center"
                         />
-                        <button
-                            className="relative align-bottom justify-center w-full h-10 my-2 bg-green-400 hover:bg-green-600 text-black font-bold border border-black"
-                            onClick={() => onIngresarSala?.(sala)}
-                        >
-                            Ingresar a sala
-                        </button>
                     </div>
                 </div>
             </div>
