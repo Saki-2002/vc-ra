@@ -1,5 +1,14 @@
+//======================
+//       IMPORTS
+//======================
 import * as mediasoup from "mediasoup"
 
+
+//======================
+// CONSTANTES NECESARIAS
+//======================
+
+//mediaCodecs: Define parametros de audio y video que usará el Router
 const mediaCodecs = [
     {
         kind: "audio",
@@ -20,31 +29,37 @@ const mediaCodecs = [
     }
 ]
 
+//workerSettings: Define rtcMinPort y rtcMaxPort para crear el worker
 const workerSettings = {
     rtcMinPort: 2000,
     rtcMaxPort: 2020
 }
 
+//======================
+//  VARIABLES GLOBALES
+//======================
 
-//Variables Globales
 let workerGlobal
-let rooms = new Map() // (roomId, { router , peers[] })
-let transports = new Map() // (transport.id, transport)
-let producers = new Map()
-let consumers = new Map()
-let peers = new Map() // (socket.id, 
-// {socket , 
-// transports[], 
-// producers[], 
-// consumers[], 
-// userDetails{
-//      username, isHost
-//}})
+let rooms = new Map()       // (roomId, { router , peersId[] })
+let transports = new Map()  // (transport.id, transport)
+let producers = new Map()   // (producer.id, producers)
+let consumers = new Map()   // (consumer.id, consumers)
+let peers = new Map()       // (socket.id, {socket , 
+                            //              transports[], 
+                            //              producers[], 
+                            //              consumers[], 
+                            //              userDetails{
+                            //                  username, isHost
+                            //              }})
+                            
+                            
+//======================
+//      FUNCIONES
+//======================
 
-//FUNCIONES
-
-
-//Entrada: Worker, conexión Socket y RoomId
+//(async) createRoom
+//Entrada: RoomId, socketId
+//Uso: Crea un Room
 //Salida: Router
 const createRoom = async (roomId, socketId) => {
 
@@ -55,27 +70,34 @@ const createRoom = async (roomId, socketId) => {
             peers: [socketId]
         })
         console.log("Room creado con exito. Id: ", roomId)
+        return newRouter
     } catch (err) {
         console.error("Error al crear el Router", err)
     }
 }
 
+//(async) findOrCreateRoom
+//Entradas: RoomId, SocketId
+//Uso: Existe una Room con RoomId ? Return Room : createRoom
+//Salida: Router or Router(createRoom)
 const findOrCreateRoom = async (roomId, socketId) => {
 
     if (!rooms.get(roomId)) {
         await createRoom(roomId, socketId)
     } else {
         rooms.get(roomId)?.peers.push(socketId)
+        return rooms.get(roomId)?.router
     }
 }
 
-const getRouter = (roomId) => {
-    return rooms.get(roomId)?.router
-}
-
+//(async) createWebRtcTransport
+//Entradas: RoomId, SocketId
+//Uso: Crea un WebRtcTransport
+//Salida: transport.id, transport.iceParameters, transport.iceCandidates,
+// transport.dtlsParameters
 const createWebRtcTransport = async (roomId, socketId) => {
 
-    const router = getRouter(roomId)
+    const router = rooms.get(roomId)?.router
     if (!router) throw new Error(`No se encontró router para la sala ${roomId}`);
     const transport = await router.createWebRtcTransport({
         listenIps: [{
@@ -100,6 +122,11 @@ const createWebRtcTransport = async (roomId, socketId) => {
     }
 }
 
+//(async) produce
+//Entradas: SocketId, TransportId, kind, rtpParameters
+//Uso: Crea un producer asociado a kind y a un transport.
+// Requiere rtpParameters
+//Salida: Producer.id 
 const produce = async (socketId, transportId, kind, rtpParameters) => {
 
     const transport = transports.get(transportId)
@@ -116,6 +143,12 @@ const produce = async (socketId, transportId, kind, rtpParameters) => {
     return producer.id
 }
 
+//(async) consume
+//Entradas: SocketId, TransportId, ProducerId, rtpCapabilities
+//Uso: Crea un consumer asociado a un producer y a un transport.
+// Requiere de rtpCapabilities
+//Salida: consumer.id, consumer.producerId, consumer.kind, 
+// consumer.rtpParameters
 const consume = async(socketId, transportId, producerId, rtpCapabilities) => {
     const transport = transports.get(transportId)
     if(!transport) throw new Error(`Transport no encontrado. Id: ${transportId}`);
@@ -141,6 +174,10 @@ const consume = async(socketId, transportId, producerId, rtpCapabilities) => {
     })
 }
 
+// createPeer
+//Entradas: Socket, Username, isHost
+//Uso: Crea e inicializa el objeto peer con las propiedades indicadas
+//Salida: Ninguna (Modifica variables globales)
 const createPeer = (socket, username, isHost) => {
     peers.set(socket.id, {
         socket,
@@ -154,6 +191,10 @@ const createPeer = (socket, username, isHost) => {
     })
 }
 
+//(async) removeProducers
+//Entradas: SocketId
+//Uso: Quita y cierra los producers del map global y del peer
+//Salida: Ninguna (Modifica variables globales)
 const removeProducers = async (socketId) => {
     const peer = peers.get(socketId)
     if (!peer) return;
@@ -168,6 +209,10 @@ const removeProducers = async (socketId) => {
     }
 }
 
+//(async) removeConsumers
+//Entradas: SocketId
+//Uso: Quita y cierra los consumers del map global y del peer
+//Salida: Ninguna (Modifica variables globales)
 const removeConsumers = async (socketId) => {
     const peer = peers.get(socketId)
     if (!peer) return;
@@ -182,6 +227,10 @@ const removeConsumers = async (socketId) => {
     }
 }
 
+//(async) removeTransports
+//Entradas: SocketId
+//Uso: Quita y cierra los transports del map global y del peer
+//Salida: Ninguna (Modifica variables globales)
 const removeTransports = async (socketId) => {
     const peer = peers.get(socketId)
     if (!peer) return;
@@ -196,6 +245,10 @@ const removeTransports = async (socketId) => {
     }
 }
 
+//(async) removeProducers
+//Entradas: SocketId, RoomId
+//Uso: Borra al peer con id SocketId del map global y de la sala
+//Salida: Ninguna (Modifica variables globales)
 const removePeer = async (socketId, roomId) => {
 
     if (rooms.get(roomId) && roomId) {
@@ -207,17 +260,32 @@ const removePeer = async (socketId, roomId) => {
 }
 
 
+//======================
+//  FUNCION PRINCIPAL
+//======================
+
 
 async function handleVideoConference(io) {
 
-    workerGlobal = await mediasoup.createWorker(workerSettings)
+    /* Flujo:
+        -> Crear Worker
+        -> Conectar con cliente [io.on("connection")]
+            -> Listeners
+    */
 
+    //Se crea el worker
+    workerGlobal = await mediasoup.createWorker(workerSettings)
 
     //Conexión con Cliente
     io.on("connection", (socket) => {
         console.log("Usuario conectado con servidor. Id: ", socket.id)
 
         //Listeners
+
+        //socket.on "disconnect"
+        //Recibe: Nada
+        //Función: Limpieza de producers, consumers, transports y peers
+        //Envía: Nada
         socket.on("disconnect", async () => {
             try {
                 await removeProducers(socket.id)
@@ -230,17 +298,30 @@ async function handleVideoConference(io) {
             }
         })
 
-        socket.on("joinRoom", async (roomId, username, isHost) => {
+        //socket.on "joinRoom"
+        //Recibe: roomId, username, isHost
+        //Función: Crea o busca una room -> Crea el peer ->
+        // Ingresa al usuario al room
+        //Envía: router.rtpCapabilities
+        socket.on("joinRoom", async (roomId, username, isHost, callback) => {
             //Obtener o crear room
-            await findOrCreateRoom(roomId, socket.id)
+            const router = await findOrCreateRoom(roomId, socket.id)
             socket.roomId = roomId
             createPeer(socket, username, isHost)
             console.log(`Usuario ${socket.id} ingreso a Room ${roomId}`)
+            callback({
+                rtpCapabilities: router.rtpCapabilities
+            })
         })
 
-        socket.on("createWebRtcTransport", async (callback) => {
+        //socket.on "createWebRtcTransport"
+        //Recibe: roomId, direction
+        //Función: Crear Transport
+        //Envía: transportInfo 
+        // { id, iceParameters, iceCandidates, dtlsParameters}
+        socket.on("createWebRtcTransport", async ({roomId, direction}, callback) => {
             try {
-                const transportInfo = await createWebRtcTransport(socket.roomId, socket.id)
+                const transportInfo = await createWebRtcTransport(roomId, socket.id)
                 callback(transportInfo)
             } catch (err) {
                 console.error("Error al crear el WebRtcTransport", err)
@@ -248,6 +329,11 @@ async function handleVideoConference(io) {
             }
         })
 
+        //socket.on "connectTransport"
+        //Recibe: transportId, dtlsParameters
+        //Función: Obtiene transport por id ->
+        // conecta transport usando dtlsParameters
+        //Envía: Connected: true
         socket.on("connectTransport", async ({ transportId, dtlsParameters }, callback) => {
             try {
                 const transport = transports.get(transportId)
@@ -260,6 +346,10 @@ async function handleVideoConference(io) {
             }
         })
 
+        //socket.on "produce"
+        //Recibe: transportId, kind, rtpParameters
+        //Función: Crear producer de tipo kind. Usa rtpParameters
+        //Envía: ProducerId
         socket.on("produce", async ({ transportId, kind, rtpParameters }, callback) => {
             try {
                 const producerId = await produce(socket.id, transportId, kind, rtpParameters)
@@ -270,7 +360,12 @@ async function handleVideoConference(io) {
             }
         })
 
-        socket.on("consume", async ({transportId, producerId, rtpCapabilities}, callback) => {
+        //socket.on "consume"
+        //Recibe: roomId, transportId, producerId, rtpCapabilities
+        //Función: Crear consumer asociado a producerId. Usa rtpCapabilities
+        //Envía: consumerInfo 
+        // {id, producerId, kind, rtpParameters}
+        socket.on("consume", async ({roomId, transportId, producerId, rtpCapabilities}, callback) => {
             try {
                 const consumerInfo = await consume(socket.id, transportId, producerId, rtpCapabilities)
                 callback(consumerInfo)
@@ -280,6 +375,10 @@ async function handleVideoConference(io) {
             }
         })
 
+        //socket.on "pauseProducer"
+        //Recibe: ProducerId
+        //Función: Busca y pausa el producer
+        //Envía: paused: true
         socket.on("pauseProducer", async ({producerId}, callback) =>{
             try {
                 const producer = producers.get(producerId)
@@ -292,6 +391,10 @@ async function handleVideoConference(io) {
             }
         })
 
+        //socket.on "resumeProducer"
+        //Recibe: ProducerId
+        //Función: Busca y resume el producer
+        //Envía: resumed: true
         socket.on("resumeProducer", async ({producerId}, callback) =>{
             try {
                 const producer = producers.get(producerId)
@@ -304,15 +407,33 @@ async function handleVideoConference(io) {
             }
         })
 
+        //socket.on "getProducers"
+        //Recibe: RoomId
+        //Función: Obtiene todos los producers de una room exceptuando
+        // los relacionados con el peer que hace la llamada
+        //Envía: Array de ProducersId
+        socket.on("getProducers", (roomId, callback) => {
+            try {
+                const room = rooms.get(roomId)
+                if (!room) throw new Error(`Sala no encontrada: ${roomId}`);
 
-
-
-
+                const producersIds = []
+                for (const peerId of room.peers) {
+                    if (peerId === socket.id) continue
+                    const peer = peers.get(peerId)
+                    if (peer) {
+                        peer.producers.forEach(p => {
+                            producersIds.push(p.id)
+                        });
+                    }
+                }
+                callback(producersIds)
+            } catch (err) {
+                console.error("Error obteniendo producers.", err)
+                callback({ error: err.message})
+            }
+        })
     })
-
-    // Crear un worker
-
-
 }
 
 export default handleVideoConference
