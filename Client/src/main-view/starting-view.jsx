@@ -1,31 +1,76 @@
+//======================
+//       IMPORTS
+//======================
 import { useRef, useState } from "react"
-import Draggable from "react-draggable"
 import * as handleConnection from "../logic/connection"
 import { useNavigate } from "react-router-dom"
 
+
+//======================
+//	FUNCION PRINCIPAL
+//======================
 function Starting_View() {
+
+
+//======================
+//		CONSTANTES
+//======================
 
 	const navigate = useNavigate()
 	const [roomId, setRoomId] = useState("")
 	const [username, setUsername] = useState("")
 
-	const joinRoom = (roomId, username) => {
+
+//======================
+//		FUNCIONES
+//======================
+
+	//(async) joinRoom
+	//Entradas: RoomId, username
+	//Uso: Llama a joinRoom de handleConnection ->
+	// navega a */room/{roomId} [main-view]
+	//Salida: Ninguna
+	const joinRoom = async (roomId, username) => {
 		//Unirse a sala
-		handleConnection.joinRoom(roomId, username, false)
+		await handleConnection.joinRoom(roomId, username, false)
 		navigate(`/room/${roomId}`, { state: { username } })
 	}
 
-	const createRoom = (username) => {
+	//(async) createRoom
+	//Entradas: username
+	//Uso: Codigo al azar -> llama a joinRoom de handleConnection ->
+	// navega a */room/{roomId} [main-view]
+	//Salida: Ninguna
+	const createRoom = async (username) => {
 		const roomId = createCode()
-		handleConnection.joinRoom(roomId, username, true)
+		await handleConnection.joinRoom(roomId, username, true)
 		navigate(`/room/${roomId}`, { state: { username } })
 	}
 
+	//createCode
+	//Entradas: Ninguna
+	//Uso: Crea un codigo de 4 digitos al azar
+	//Salida: String de 4 digitos
 	const createCode = () => {
 		const numero = Math.floor(Math.random()*10000)
 		return String(numero).padStart(4,"0")
 	}
 
+
+
+//======================
+//	Vista HTML / CSS
+//======================
+
+/*
+	Full-Screen RED
+		Filas: 3
+			1F-> Columnas: 2
+				1C -> Botón Crear Sala GREEN
+				2C -> Botón Unirse Sala BLUE
+			2F-> Input "Ingresa el Id de Sala..."
+			3F-> Input "Ingresa tu nombre de Usuario..."
+*/
 	return (
 		<>
 			<div className="bg-red-900 w-screen h-screen flex items-center justify-center">

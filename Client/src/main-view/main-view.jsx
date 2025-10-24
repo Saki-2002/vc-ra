@@ -1,4 +1,6 @@
-
+//======================
+//       IMPORTS
+//======================
 import { useState, useEffect, useRef } from "react"
 import "../App.css"
 import LocalVideo from "./local-video"
@@ -10,12 +12,34 @@ import { useLocation, useParams } from "react-router-dom"
 import LoadingScreen from "./loading-screen"
 
 
+//======================
+//  FUNCION PRINCIPAL
+//======================
 function MainView() {
+    
+//======================
+//      CONSTANTES
+//======================
     const { roomId } = useParams()
     const { state } = useLocation()
     const username = state?.username
     const cargando = false
 
+
+
+//======================
+//  VISTA HTML / CSS
+//======================
+
+/*
+    Full-Screen GRAY
+        Columnas: 2
+            1C-> w2/3 AMBER Filas: 2
+                1F-> h4/5 INDIGO
+                2F-> h1/5 ROSE
+            2C->w1/3 GREEN
+        Absolute (Draggable) LocalVideo
+*/
     return (
         <>
             {cargando ?
