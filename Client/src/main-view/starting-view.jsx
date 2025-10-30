@@ -31,6 +31,8 @@ function Starting_View() {
 	// navega a */room/{roomId} [main-view]
 	//Salida: Ninguna
 	const joinRoom = async (roomId, username) => {
+		if(!roomId) return
+		if(!username) return
 		//Unirse a sala
 		await handleConnection.joinRoom(roomId, username, false)
 		navigate(`/room/${roomId}`, { state: { username } })

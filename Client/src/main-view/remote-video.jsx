@@ -1,72 +1,64 @@
-import { useEffect, useRef, useState} from "react"
+import { useEffect, useRef } from "react";
 
 function RemoteVideo({ stream, videoEnabled, audioEnabled, username }) {
+
     const videoRef = useRef(null)
-    const lastStreamRef = useRef(null)
-    const [filteredStream, setFilteredStream] = useState(null)
+    const audioRef = useRef(null)
 
     useEffect(() => {
-        console.log("stream:", stream)
-        if (stream instanceof MediaStream) {
-            const videoTracks = stream.getVideoTracks()
-            const audioTracks = stream.getAudioTracks()
-            console.log('[REMOTE-VIDEO] user:', username, 'videoTracks:', videoTracks, 'audioTracks:', audioTracks)
-            // Solo crea el filteredStream si el stream original cambia
-            const newFilteredStream = new MediaStream()
-            if (videoTracks[0]) newFilteredStream.addTrack(videoTracks[0])
-            if (audioTracks[0]) newFilteredStream.addTrack(audioTracks[0])
-            setFilteredStream(newFilteredStream)
-        } else {
-            setFilteredStream(null)
-        }
-    }, [stream])
-
-    useEffect(() => {
-        const videoEl = videoRef.current
-        if (!videoEl) return
-        // Forzar actualización del srcObject siempre que cambie filteredStream
-        if (videoEnabled && filteredStream instanceof MediaStream) {
-            videoEl.srcObject = filteredStream
-            lastStreamRef.current = filteredStream
-        } else {
-            if (videoEl.srcObject) {
-                videoEl.srcObject = null
-                lastStreamRef.current = null
+        if (videoRef.current) {
+            if (stream && videoEnabled) {
+                if (videoRef.current.srcObject !== stream) videoRef.current.srcObject = stream
+            } else {
+                videoRef.current.srcObject = null
             }
+
         }
-    }, [filteredStream, videoEnabled])
+
+        if (audioRef.current) {
+            if (stream && audioEnabled) {
+                if (audioRef.current.srcObject !== stream) audioRef.current.srcObject = stream
+            } else {
+                audioRef.current.srcObject = null
+            }
+
+        }
+    }, [stream, videoEnabled, audioEnabled])
+
 
     return (
-        <div className="relative w-[180px] h-[180px] border-2 border-gray-500 rounded-md overflow-hidden m-2 flex items-center justify-center bg-gray-200">
-            {/* Si el video está activado y hay stream, muestra el video. Si no, box gris */}
-            {videoEnabled && filteredStream ? (
-                <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    className="w-full h-full object-cover"
-                    onLoadedMetadata={() => {
-                        const videoEl = videoRef.current
-                        if (videoEl && videoEl.paused) {
-                            videoEl.play().catch(err => {
-                                console.warn("No se pudo auto Play:", err)
-                            })
-                        }
-                    }}
-                />
-            ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gray-400 text-gray-700 font-bold text-xl">
-                    <span>{username?.[0]?.toUpperCase() || "?"}</span>
-                </div>
-            )}
-            {/* Overlay si el micrófono está desactivado */}
-            {!audioEnabled && (
-                <div className="absolute top-2 left-2 bg-red-600 text-white px-2 py-1 rounded text-xs font-bold z-10">
-                    Micrófono apagado
-                </div>
-            )}
+
+        <div className="w-40 bg-opacity-30 bg-gray-300 rounded-xl">
+            <div className="m-3 h-40 bg-gray-700 relative rounded-lg overflow-hidden">
+                {videoEnabled ? (
+                    <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted={!audioEnabled}
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    <div className="text-white text-wrap font-semibold text-2xl w-full h-full flex items-center text-center bg-gray-700">
+                        Cámara Apagada
+                    </div>
+                )}
+
+            </div>
+
+            <audio
+                ref={audioRef}
+                autoPlay
+                muted={!audioEnabled}
+            />
+            <div className="text-base mt-1 w-full text-center text-black font-semibold">
+                {username ?? "Peer"}
+            </div>
+
         </div>
+
     )
+
 }
 
 export default RemoteVideo

@@ -15,6 +15,7 @@ const io = new Server(server, {
   cors: {
     //Permite peticiones desde cliente
     origin: "http://localhost:5173",
+    //origin: "*",
     methods: ["GET", "POST"]
   }
 })

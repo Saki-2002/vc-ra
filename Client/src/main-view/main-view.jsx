@@ -10,36 +10,74 @@ import * as mediasoupClient from "mediasoup-client"
 import { useDebugValue } from "react"
 import { useLocation, useParams } from "react-router-dom"
 import LoadingScreen from "./loading-screen"
+import * as handleConnection from "../logic/connection"
 
 
 //======================
 //  FUNCION PRINCIPAL
 //======================
 function MainView() {
-    
-//======================
-//      CONSTANTES
-//======================
+
+    //======================
+    //      CONSTANTES
+    //======================
     const { roomId } = useParams()
     const { state } = useLocation()
     const username = state?.username
-    const cargando = false
+    const [cargando, setCargando] = useState(true)
+    const [remoteStreams, setRemoteStreams] = useState(new Map())
+    const [remotePeers, setRemotePeers] = useState(new Map())
 
 
+    useEffect(() => {
 
-//======================
-//  VISTA HTML / CSS
-//======================
+        const initializeRoom = async () => {
+            try {
 
-/*
-    Full-Screen GRAY
-        Columnas: 2
-            1C-> w2/3 AMBER Filas: 2
-                1F-> h4/5 INDIGO
-                2F-> h1/5 ROSE
-            2C->w1/3 GREEN
-        Absolute (Draggable) LocalVideo
-*/
+                handleConnection.setMediaTracksUpdateCallback((updatedTracks) => {
+                    console.log("Actualizando streams remotos:", updatedTracks.size)
+                    setRemoteStreams(new Map(updatedTracks))
+                })
+
+                handleConnection.setPeersUpdateCallback((updatedPeers) => {
+                    setRemotePeers(new Map(updatedPeers))
+                })
+
+                //Se llama a createConsumers
+                console.log("a")
+                await handleConnection.createConsumers()
+                console.log("b")
+                setRemoteStreams(handleConnection.getMediaTracks())
+                setRemotePeers(handleConnection.getPeers())
+                console.log("c")
+                setCargando(false)
+            } catch(err){
+                console.error("Error al Inicializar Room. Por favor volver a cargar la página")
+            }
+        }
+        initializeRoom()
+
+        return() => {
+            handleConnection.setMediaTracksUpdateCallback(null)
+            handleConnection.setPeersUpdateCallback(null)
+        }
+
+    }, [])
+
+
+    //======================
+    //  VISTA HTML / CSS
+    //======================
+
+    /*
+        Full-Screen GRAY
+            Columnas: 2
+                1C-> w2/3 AMBER Filas: 2
+                    1F-> h4/5 INDIGO
+                    2F-> h1/5 ROSE
+                2C->w1/3 GREEN
+            Absolute (Draggable) LocalVideo
+    */
     return (
         <>
             {cargando ?
@@ -53,12 +91,32 @@ function MainView() {
                             </div>
                         </div>
                         <div className="bg-emerald-500 md:w-1/3 w-full rounded-2xl p-4">
+                            <div className="flex flex-wrap gap-2">
+                                {Array.from(remotePeers.entries()).map(([socketId, peerInfo]) => {
+                                    //Crear MediaStream por cada peer
+                                    const tracks = remoteStreams.get(socketId)||{}
+                                    const stream = new MediaStream()
+                                    if(tracks.audioTrack) stream.addTrack(tracks.audioTrack);
+                                    if(tracks.videoTrack) stream.addTrack(tracks.videoTrack);
+
+                                    const username = peerInfo?.username || `Peer-${String(socketId).slice(0,6)}`
+                                    return (
+                                        <RemoteVideo
+                                            key={socketId}
+                                            stream={stream}
+                                            videoEnabled={!!tracks.videoTrack}
+                                            audioEnabled={!!tracks.audioEnabled}
+                                            username={username}
+                                        />
+                                    )
+                                })}
+                            </div>
                         </div>
                     </div>
                     <div className="fixed inset-0 pointer-events-none">
-                        <LocalVideo/>
+                        <LocalVideo />
                     </div>
-                    
+
                 </>
 
             }

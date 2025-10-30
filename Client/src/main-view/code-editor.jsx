@@ -3,7 +3,6 @@ import CodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
 import { EditorView, Decoration } from "@codemirror/view";
-import socket from "../logic/connection";
 import ConsoleOutput from "./console-output";
 import CommentsPanel from "./comments-panel";
 import { useMemo } from "react";
