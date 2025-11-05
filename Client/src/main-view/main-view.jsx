@@ -10,7 +10,8 @@ import * as mediasoupClient from "mediasoup-client"
 import { useDebugValue } from "react"
 import { useLocation, useParams } from "react-router-dom"
 import LoadingScreen from "./loading-screen"
-import * as handleConnection from "../logic/connection"
+import * as handleConnection from "../logic/connectionVideoConference"
+import ConsoleOutput from "./console-output"
 
 
 //======================
@@ -83,11 +84,13 @@ function MainView() {
             {cargando ?
                 <LoadingScreen /> :
                 <>
-                    <div className=" bg-gray-500 min-h-screen flex flex-col md:flex-row gap-4 items-stretch p-4">
-                        <div className="bg-amber-600 flex-1 flex flex-col gap-4 p-4 rounded-2xl">
-                            <div className="bg-indigo-500 flex-1 min-h-[100px]">
+                    <div className=" bg-gray-500 h-screen flex flex-col md:flex-row gap-4 items-stretch p-4">
+                        <div className="bg-amber-600 flex-1 flex flex-col gap-4 p-4 rounded-2xl overflow-hidden">
+                            <div className="bg-indigo-500 h-3/4 min-h-[100px] overflow-hidden flex flex-col">
+                                <CodeEditor/>
                             </div>
-                            <div className="bg-rose-500 h-1/5 min-h-[50px]">
+                            <div className="bg-rose-500 h-1/3 min-h-[50px]">
+                                <ConsoleOutput roomId={roomId}/>
                             </div>
                         </div>
                         <div className="bg-emerald-500 md:w-1/3 w-full rounded-2xl p-4">

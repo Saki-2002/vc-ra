@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import Draggable from "react-draggable"
-import * as handleConnection from "../logic/connection"
+import * as handleConnection from "../logic/connectionVideoConference"
 
 
 function LocalVideo(ref) {

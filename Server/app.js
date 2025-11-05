@@ -3,6 +3,7 @@ import express from "express"
 import http from "http"
 import { Server } from "socket.io"
 import handleVideoConference from "./videoConference.js"
+import handleCodeEditor from "./codeEditor.js"
 
 
 const app = express()
@@ -26,3 +27,4 @@ server.listen(PORT, () => {
 });
 
 handleVideoConference(io)
+handleCodeEditor(io)

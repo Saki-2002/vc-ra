@@ -1,8 +1,7 @@
 import * as mediasoup from "mediasoup-client"
 //import { useRef } from "react"
-import { io } from "socket.io-client"
+import socket from "../logic/socketConnection"
 
-const socket = io("http://localhost:5000")
 //const socket = io("https://4f4mbq09-5000.brs.devtunnels.ms/")
 
 //======================
@@ -545,4 +544,15 @@ const toggleVideo = async () => {
 
 
 
-export { joinRoom, createConsumers, toggleAudio, toggleVideo, getMediaTracks, produce, setMediaTracksUpdateCallback, setPeersUpdateCallback, getPeers, getSelfSocketId }
+export {
+    joinRoom,
+    createConsumers,
+    toggleAudio,
+    toggleVideo,
+    getMediaTracks,
+    produce,
+    setMediaTracksUpdateCallback,
+    setPeersUpdateCallback,
+    getPeers,
+    getSelfSocketId
+}

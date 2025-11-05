@@ -2,7 +2,7 @@
 //       IMPORTS
 //======================
 import { useRef, useState } from "react"
-import * as handleConnection from "../logic/connection"
+import * as handleConnection from "../logic/connectionVideoConference"
 import { useNavigate } from "react-router-dom"
 
 
