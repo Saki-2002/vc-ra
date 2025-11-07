@@ -12,6 +12,7 @@ let currentTmpFile = null
 //let activePythonProcesses = new Map()
 
 let roomsCode = new Map()
+let roomsComments = new Map()
 
 function handleCodeEditor(app, io) {
 
@@ -69,6 +70,11 @@ function handleCodeEditor(app, io) {
             callback({code: currentCode})
         })
 
+        socket.on("requestCurrentComments", (roomId, callback) => {
+            const currentComments = roomsComments.get(roomId) || []
+            callback({commments: currentComments})
+        })
+
         socket.on("input", (input) => {
             if(currentPythonProcess){
                 currentPythonProcess.stdin.write(input + "\n")
@@ -78,6 +84,29 @@ function handleCodeEditor(app, io) {
         socket.on("codeChange", ({roomId, code}) => {
             roomsCode.set(roomId, code)
             socket.to(roomId).emit("codeChange", {code})
+        })
+
+        socket.on("addComment", ({roomId, comment}) => {
+            const comments = roomsComments.get(roomId) || []
+            comments.push(comment)
+            roomsComments.set(roomId, comments)
+            io.to(roomId).emit("commentAdded", {comment})
+        })
+
+        socket.on("deleteComment", ({roomId, commentId}) => {
+            const comments = roomsComments.get(roomId) || []
+            const filtered = comments.filter(c=> c.id !== commentId)
+            roomsComments.set(roomId, filtered)
+
+            io.to(roomId).emit("commentDeleted", {commentId})
+        })
+
+        socket.on("selectionChanged", ({roomId, selection, username}) => {
+            socket.to(roomId).emit("remoteSelection", {
+                socketId: socket.id,
+                username,
+                selection
+            })
         })
 
         socket.on("kill", () => {

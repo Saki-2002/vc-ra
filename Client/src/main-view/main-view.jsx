@@ -47,12 +47,9 @@ function MainView() {
                 })
 
                 //Se llama a createConsumers
-                console.log("a")
                 await handleConnection.createConsumers()
-                console.log("b")
                 setRemoteStreams(handleConnection.getMediaTracks())
                 setRemotePeers(handleConnection.getPeers())
-                console.log("c")
                 setCargando(false)
             } catch(err){
                 console.error("Error al Inicializar Room. Por favor volver a cargar la página")
@@ -89,7 +86,7 @@ function MainView() {
                     <div className=" bg-gray-500 h-screen flex flex-col md:flex-row gap-4 items-stretch p-4">
                         <div className="bg-amber-600 flex-1 flex flex-col gap-4 p-4 rounded-2xl overflow-hidden">
                             <div className="bg-indigo-500 h-3/4 min-h-[100px] overflow-hidden flex flex-col">
-                                <CodeEditor roomId={roomId} isHost={isHost}/>
+                                <CodeEditor roomId={roomId} isHost={isHost} username={username}/>
                             </div>
                             <div className="bg-rose-500 h-1/3 min-h-[50px]">
                                 <ConsoleOutput roomId={roomId}/>

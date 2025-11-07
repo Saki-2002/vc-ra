@@ -376,18 +376,11 @@ const createConsumers = async () => {
         //Crear y conectar Transport
         //Obtener Producers
         //For Crear consumers
-        console.log("1")
         await createRecvTransport()
-        console.log("2")
         await getProducers()
-        console.log("3")
-
-        console.log(remoteProducersIds)
         for (const pId of remoteProducersIds) {
             await consumeTrack(pId)
-            console.log("End")
         }
-        console.log("4")
         saveMediaFromConsumers() //Se obtiene mediaTracks
     } catch (err) {
         throw err

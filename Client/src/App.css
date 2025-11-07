@@ -6,3 +6,12 @@
 .comment-highlight:hover {
     background-color: rgba(255, 255, 0, 0.8);
 }
+
+.remote-selection {
+    background-color: rgba(100, 200, 255, 0.3);
+    border: 1px dashed #64c8ff
+}
+
+.remote-selection:hover {
+    background-color: rgba(100, 200, 255, 0.5);
+}

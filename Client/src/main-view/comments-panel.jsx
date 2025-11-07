@@ -1,5 +1,5 @@
 function CommentsPanel({ 
-    comments, 
+    comments =[], 
     selection, 
     showCommentInput, 
     commentText, 

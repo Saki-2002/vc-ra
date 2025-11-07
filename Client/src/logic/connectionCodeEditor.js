@@ -6,6 +6,10 @@ let setIsExecuting_coRef = null
 let setIsExecuting_ceRef = null
 let setCodeRef = null
 
+let onCommentAddedRef = null
+let onCommentDeletedRef = null
+let onRemoteSelectionRef = null
+
 const setupConsoleListeners = (addOutput, setIsExecuting_co) => {
 
     addOutputRef = addOutput
@@ -95,6 +99,53 @@ const requestCurrentCode = (roomId, callback) => {
     })
 }
 
+const requestCurrentComments = (roomId, callback) => {
+    socket.emit("requestCurrentComments", roomId, ({comments}) => {
+        callback(comments)
+    })
+}
+
+const emitAddComment = (roomId, comment) => {
+    socket.emit("addComment", {roomId, comment})
+}
+
+const emitDeleteComment = (roomId, commentId) => {
+    socket.emit("deleteComment", {roomId, commentId})
+}
+
+const emitSelectionChange = (roomId, selection, username) => {
+    socket.emit("selectionChanged", {roomId, selection, username})
+}
+
+const setupCommentListeners = (onCommentAdded, onCommentDeleted, onRemoteSelection) => {
+    onCommentAddedRef = onCommentAdded
+    onCommentDeletedRef = onCommentDeleted
+    onRemoteSelectionRef = onRemoteSelection
+
+    socket.off("commentAdded")
+    socket.off("commentDeleted")
+    socket.off("remoteSelection")
+
+
+    socket.on("commentAdded", ({comment}) => {
+        onCommentAddedRef && onCommentAddedRef(comment)
+    })
+
+    socket.on("commentDeleted", ({commentId}) => {
+        onCommentDeletedRef && onCommentDeletedRef(commentId)
+    })
+
+    socket.on("remoteSelection", ({socketId, username, selection}) => {
+        onRemoteSelectionRef && onRemoteSelectionRef(socketId, username, selection)
+    })
+}
+
+const cleanupCommentListeners = () => {
+    socket.off("commentAdded")
+    socket.off("commentDeleted")
+    socket.off("remoteSelection")
+}
+
 export {
     runCode,
     setupExecutionListeners,
@@ -104,5 +155,11 @@ export {
     codeChangeListener,
     emitCodeChange,
     cleanupCodeChangeListener,
-    requestCurrentCode
+    requestCurrentCode,
+    requestCurrentComments,
+    emitAddComment,
+    emitDeleteComment,
+    emitSelectionChange,
+    setupCommentListeners,
+    cleanupCommentListeners
 }
