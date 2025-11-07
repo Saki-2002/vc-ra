@@ -80,13 +80,19 @@ const codeChangeListener = (setCode) => {
 
     socket.off("codeChange")
     
-    socket.on("codeChange", (code) => {
+    socket.on("codeChange", ({code}) => {
         setCodeRef && setCodeRef(code)
     })
 }
 
 const cleanupCodeChangeListener = () => {
     socket.off("codeChange")
+}
+
+const requestCurrentCode = (roomId, callback) => {
+    socket.emit("requestCurrentCode", roomId, ({code}) => {
+        callback(code)
+    })
 }
 
 export {
@@ -97,5 +103,6 @@ export {
     killExecution,
     codeChangeListener,
     emitCodeChange,
-    cleanupCodeChangeListener
+    cleanupCodeChangeListener,
+    requestCurrentCode
 }

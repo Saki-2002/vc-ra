@@ -11,6 +11,8 @@ let currentPythonProcess = null
 let currentTmpFile = null
 //let activePythonProcesses = new Map()
 
+let roomsCode = new Map()
+
 function handleCodeEditor(app, io) {
 
     app.post("/api/run-python", (req, res) => {
@@ -62,15 +64,20 @@ function handleCodeEditor(app, io) {
     io.on("connection", (socket) => {
         console.log("Usuario conectado con servidor (Editor de Codigo). Id: ", socket.id)
 
+        socket.on("requestCurrentCode", (roomId, callback) => {
+            const currentCode = roomsCode.get(roomId) || ""
+            callback({code: currentCode})
+        })
+
         socket.on("input", (input) => {
             if(currentPythonProcess){
                 currentPythonProcess.stdin.write(input + "\n")
             }
         })
 
-        roomId = socket.roomId
-        socket.on("codeChange", (data) => {
-            socket.to(roomId).emit("codeChange", data)
+        socket.on("codeChange", ({roomId, code}) => {
+            roomsCode.set(roomId, code)
+            socket.to(roomId).emit("codeChange", {code})
         })
 
         socket.on("kill", () => {

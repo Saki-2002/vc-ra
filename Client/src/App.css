@@ -1,1 +1,8 @@
+.comment-highlight {
+    background-color: rgba(255, 255, 0, 0.5);
+    border-bottom: 2px solid #ffd700;
+}
 
+.comment-highlight:hover {
+    background-color: rgba(255, 255, 0, 0.8);
+}

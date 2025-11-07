@@ -34,8 +34,9 @@ function Starting_View() {
 		if(!roomId) return
 		if(!username) return
 		//Unirse a sala
-		await handleConnection.joinRoom(roomId, username, false)
-		navigate(`/room/${roomId}`, { state: { username } })
+		const isHost = false
+		await handleConnection.joinRoom(roomId, username, isHost)
+		navigate(`/room/${roomId}`, { state: { username, isHost } })
 	}
 
 	//(async) createRoom
@@ -44,18 +45,25 @@ function Starting_View() {
 	// navega a */room/{roomId} [main-view]
 	//Salida: Ninguna
 	const createRoom = async (username) => {
-		const roomId = createCode()
-		await handleConnection.joinRoom(roomId, username, true)
-		navigate(`/room/${roomId}`, { state: { username } })
+		if (!username) return
+		const roomId = await createCode()
+		const isHost = true
+		await handleConnection.joinRoom(roomId, username, isHost)
+		navigate(`/room/${roomId}`, { state: { username, isHost } })
 	}
 
 	//createCode
 	//Entradas: Ninguna
 	//Uso: Crea un codigo de 4 digitos al azar
 	//Salida: String de 4 digitos
-	const createCode = () => {
-		const numero = Math.floor(Math.random()*10000)
-		return String(numero).padStart(4,"0")
+	const createCode = async () => {
+		for(let i=0; i<30; i++) {
+			const numero = Math.floor(Math.random()*10000)
+			const code = String(numero).padStart(4,"0")
+			const available = await handleConnection.isRoomAvailable(code)
+			if (available) return code
+		}
+		throw new Error("No hay códigos disponibles. Intenta de nuevo")
 	}
 
 

@@ -344,6 +344,17 @@ async function handleVideoConference(io) {
             }
         })
 
+        socket.on("isRoomAvailable", (roomCode, callback) => {
+            try {
+                const available = !rooms.has(roomCode)
+                callback({available})
+            } catch(err) {
+                callback({error: err.message})
+            }
+        })
+
+
+
         //socket.on "joinRoom"
         //Recibe: roomId, username, isHost
         //Función: Crea o busca una room -> Crea el peer ->

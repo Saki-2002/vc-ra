@@ -542,6 +542,14 @@ const toggleVideo = async () => {
     })
 }
 
+const isRoomAvailable = async (roomCode) => {
+    return await new Promise((resolve) => {
+        socket.emit("isRoomAvailable", roomCode, ({available, error}) => {
+            if (error) return resolve(false);
+            resolve(available)
+        })        
+    })
+} 
 
 
 export {
@@ -554,5 +562,6 @@ export {
     setMediaTracksUpdateCallback,
     setPeersUpdateCallback,
     getPeers,
-    getSelfSocketId
+    getSelfSocketId,
+    isRoomAvailable
 }
