@@ -1,13 +1,14 @@
-
 import express from "express"
 import http from "http"
 import { Server } from "socket.io"
 import handleVideoConference from "./videoConference.js"
 import handleCodeEditor from "./codeEditor.js"
+import cors from "cors"
 
 
 const app = express()
 app.use(express.json())
+app.use(cors({origin: "http://localhost:5173"}))
 const PORT = 5000
 const server = http.createServer(app)
 
@@ -27,4 +28,4 @@ server.listen(PORT, () => {
 });
 
 handleVideoConference(io)
-handleCodeEditor(io)
+handleCodeEditor(app,io)

@@ -1,21 +1,29 @@
 import CodeMirror, { ViewUpdate } from "@uiw/react-codemirror"
 import {python} from "@codemirror/lang-python"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { oneDark } from "@uiw/react-codemirror"
-import {runCode} from "../logic/connectionCodeEditor"
+import * as handleConnection from "../logic/connectionCodeEditor"
 
-function CodeEditor ({roomId, onExecute}) {
+function CodeEditor ({roomId}) {
 
     const [code, setCode] = useState("")
+    const [isExecuting, setIsExecuting] = useState(false)
     
-    const handleChange = (value, ViewUpdate) => {
+
+    useEffect(()=> {
+        handleConnection.setupExecutionListeners(setIsExecuting)
+        handleConnection.codeChangeListener(setCode)
+    }, [])
+    
+    const handleChange = (value) => {
         setCode(value)
+        handleConnection.emitCodeChange(value)
     }
 
-    const executeCode = (roomId, code) => {
-        //setOnExecute(true)
-        runCode(roomId, code)
-        //setOnExecute(false)
+    const executeCode = async () => {
+        if (isExecuting || !code.trim()) return
+        setIsExecuting(true)
+        await handleConnection.runCode(roomId, code)
     }
     
     
@@ -26,10 +34,13 @@ function CodeEditor ({roomId, onExecute}) {
             <div className="bg-gray-800 p-2 flex justify-between items-center">
                 <h3 className="text-white font-bold">Editor de Python</h3>
                 <button
-                    className="bg-green-500 px-4 py-1 rounded"
+                    className={`px-4 py-1 rounded ${
+                        isExecuting ? "bg-gray-500 cursor-not-allowed" : "bg-green-500 hover:bg-green-600"
+                    }`}
                     onClick={executeCode}
+                    disabled={isExecuting}
                 >
-                    Ejecutar
+                    {isExecuting ? "Ejecutando..." : "Ejecutar"}
                 </button>
             </div>
             <CodeMirror

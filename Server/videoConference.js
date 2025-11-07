@@ -314,7 +314,7 @@ async function handleVideoConference(io) {
 
     //Conexión con Cliente
     io.on("connection", (socket) => {
-        console.log("Usuario conectado con servidor. Id: ", socket.id)
+        console.log("Usuario conectado con servidor (VideoConferencia). Id: ", socket.id)
 
         //Listeners
 
