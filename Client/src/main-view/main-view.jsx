@@ -93,7 +93,7 @@ function MainView() {
                             </div>
                         </div>
                         <div className="bg-emerald-500 md:w-1/3 w-full rounded-2xl p-4">
-                            <div className="flex flex-wrap gap-2 h-5/6">
+                            <div className="flex flex-wrap gap-2 h-1/6">
                                 {Array.from(remotePeers.entries()).map(([socketId, peerInfo]) => {
                                     //Crear MediaStream por cada peer
                                     const tracks = remoteStreams.get(socketId)||{}
@@ -113,12 +113,12 @@ function MainView() {
                                     )
                                 })}
                             </div>
-                            {isHost ?
+                            {/*{isHost ?
                                 <HostView/> :
                                 <div className="h-1/6 bg-gray-700">
                                     NO HOST
                                 </div>   
-                            }
+                            }*/}
                         </div>
                     </div>
                     <div className="fixed inset-0 pointer-events-none">

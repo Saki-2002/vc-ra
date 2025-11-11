@@ -22,7 +22,9 @@ const mediaCodecs = [
         kind:"video",
         mimeType:"video/VP8",
         clockRate: 90000,
-        parameters: {}
+        parameters: {
+            "x-google-start-bitrate": 1000
+        }
     },
     {
         kind: "video",

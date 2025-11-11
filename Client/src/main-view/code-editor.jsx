@@ -39,34 +39,6 @@ const commentField = StateField.define({
     provide: f => EditorView.decorations.from(f)
 })
 
-const remoteSelectionField = StateField.define({
-    create() {
-        return Decoration.none
-    },
-    update(decorations, tr) {
-        decorations = decorations.map(tr.changes)
-
-        for (let effect of tr.effects) {
-            if (effect.is(addCommentMark)) {
-                decorations = decorations.update({
-                    add: [Decoration.mark({
-                        class: "comment-highlight",
-                        attributes: { "data-comment-id": effect.value.id }
-                    }).range(effect.value.from, effect.value.to)]
-                })
-            } else if (effect.is(removeCommentMark)) {
-                decorations = decorations.update({
-                    filter: (from, to, value) => {
-                        return value.spec.attributes?.["data-comment-id"] !== effect.value
-                    }
-                })
-            }
-        }
-        return decorations
-    },
-    provide: f=> EditorView.decorations.from(f)
-})
-
 
 function CodeEditor({ roomId, isHost, username }) {
 
@@ -80,8 +52,7 @@ function CodeEditor({ roomId, isHost, username }) {
     const [selection, setSelection] = useState(null)
     const [showCommentInput, setShowCommentInput] = useState(false)
     const [commentText, setCommentText] = useState("")
-    const [remoteSelections, setRemoteSelections] = useState([])
- 
+
     useEffect(() => {
         handleConnection.requestCurrentCode(roomId, (currentCode) => {
             setCode(currentCode)
@@ -109,16 +80,7 @@ function CodeEditor({ roomId, isHost, username }) {
             (commentId) => {
                 setComments(prev => prev.filter(c => c.id !== commentId))
             },
-            (socketId, username, selection) => {
-                if(selection) {
-                    setRemoteSelections(prev => {
-                        const filtered = prev.filter(s => s.socketId !== socketId)
-                        return [...filtered, {socketId, username, ...selection}]
-                    })
-                } else {
-                    setRemoteSelections(prev => prev.filter(s => s.socketId !== socketId))
-                }
-            }
+            null
         )
         return () => {
             handleConnection.cleanupCodeChangeListener()
@@ -128,11 +90,18 @@ function CodeEditor({ roomId, isHost, username }) {
 
     useEffect(() => {
         const view = editorRef.current?.view
-        if(!view) return
-        view.dispatch({
-            effects: StateEffect.reconfigure.of(remoteSelections)
+        if (!view) return
+
+        comments.forEach(comment => {
+            view.dispatch({
+                effects: addCommentMark.of({
+                    id: comment.id,
+                    from: comment.from,
+                    to: comment.to
+                })
+            })
         })
-    }, [remoteSelections])
+    }, [comments])
 
     const handleChange = (value) => {
 
@@ -152,20 +121,13 @@ function CodeEditor({ roomId, isHost, username }) {
         const { from, to } = state.selection.main
 
         if (from !== to) {
-            const newSelection = {
+            setSelection({
                 from,
                 to,
-                text: state.dliceDoc(from, to)
-            }
-
-            setSelection(prev => {
-                if (prev?.from === from && prev?.to === to) return prev;
-                handleConnection.emitSelectionChange(roomId, newSelection, username)
-                return newSelection
+                text: state.sliceDoc(from, to)
             })
         } else {
             setSelection(null)
-            handleConnection.emitSelectionChange(roomId, null, username)
         }
     }
 
@@ -178,13 +140,12 @@ function CodeEditor({ roomId, isHost, username }) {
             to: selection.to,
             text: commentText,
             codeSnippet: selection.text,
-            username: useraname,
+            username: username,
             timestamp: Date.now()
         }
 
         handleConnection.emitAddComment(roomId, newComment)
 
-        setComments([...comments, newComment])
         setCommentText("")
         setShowCommentInput(false)
         setSelection(null)
@@ -204,63 +165,65 @@ function CodeEditor({ roomId, isHost, username }) {
 
     return (
         <div className="flex flex-col h-full relative overflow-hidden min-h-0">
-            <div className="bg-gray-800 p-2 flex justify-between items-center">
-                <h3 className="text-white font-bold">Editor de Python</h3>
-                <div className="flex gap-2">
-                    {selection && (
-                        <button
-                            className="bg-yellow-500 px-3 py-1 rounded text-sm"
-                            onClick={() => setShowCommentInput(true)}
-                        >
-                            Comentar
-                        </button>
-                    )}
+            <div className="flex flex-1 flex-col overflow-hidden">
+                <div className="bg-gray-800 p-2 flex justify-between items-center">
+                    <h3 className="text-white font-bold">Editor de Python</h3>
+                    <div className="flex gap-2">
+                        {selection && (
+                            <button
+                                className="bg-yellow-500 px-3 py-1 rounded text-sm"
+                                onClick={() => setShowCommentInput(true)}
+                            >
+                                Comentar
+                            </button>
+                        )}
+                    </div>
+                    <button
+                        className={`px-4 py-1 rounded ${isExecuting ? "bg-gray-500 cursor-not-allowed" : "bg-green-500 hover:bg-green-600"
+                            }`}
+                        onClick={executeCode}
+                        disabled={isExecuting}
+                    >
+                        {isExecuting ? "Ejecutando..." : "Ejecutar"}
+                    </button>
                 </div>
-                <button
-                    className={`px-4 py-1 rounded ${isExecuting ? "bg-gray-500 cursor-not-allowed" : "bg-green-500 hover:bg-green-600"
-                        }`}
-                    onClick={executeCode}
-                    disabled={isExecuting}
-                >
-                    {isExecuting ? "Ejecutando..." : "Ejecutar"}
-                </button>
+                <CodeMirror
+                    className="h-full text-[16px] overflow-y-auto"
+                    ref={editorRef}
+                    value={code}
+                    height="100%"
+                    extensions={[
+                        python(),
+                        commentField,
+                        EditorView.updateListener.of(handleSelectionChange),
+                        ...(isHost ? [] : [
+                            EditorView.editable.of(false),
+                            EditorState.readOnly.of(true)
+                        ])
+                    ]}
+                    onChange={handleChange}
+                    basicSetup={{
+                        lineNumbers: true,
+                        highlightActiveLineGutter: true,
+                        highlightSpecialChars: true,
+                        foldGutter: true,
+                        drawSelection: true,
+                        dropCursor: true,
+                        indentOnInput: true,
+                        bracketMatching: true,
+                        closeBrackets: true,
+                        autocompletion: true,
+                        crosshairCursor: true,
+                        highlightActiveLine: true,
+                        highlightSelectionMatches: true,
+                        closeBracketsKeymap: true,
+                        searchKeymap: true,
+                        foldKeymap: true,
+                        completionKeymap: true,
+                        lintKeymap: true
+                    }}
+                />
             </div>
-            <CodeMirror
-                className="h-full text-[16px] overflow-y-auto"
-                ref={editorRef}
-                value={code}
-                height="100%"
-                extensions={[
-                    python(),
-                    commentField,
-                    EditorView.updateListener.of(handleSelectionChange),
-                    ...(isHost ? [] : [
-                        EditorView.editable.of(false),
-                        EditorState.readOnly.of(true)
-                    ])
-                ]}
-                onChange={handleChange}
-                basicSetup={{
-                    lineNumbers: true,
-                    highlightActiveLineGutter: true,
-                    highlightSpecialChars: true,
-                    foldGutter: true,
-                    drawSelection: true,
-                    dropCursor: true,
-                    indentOnInput: true,
-                    bracketMatching: true,
-                    closeBrackets: true,
-                    autocompletion: true,
-                    crosshairCursor: true,
-                    highlightActiveLine: true,
-                    highlightSelectionMatches: true,
-                    closeBracketsKeymap: true,
-                    searchKeymap: true,
-                    foldKeymap: true,
-                    completionKeymap: true,
-                    lintKeymap: true
-                }}
-            />
             <CommentsPanel
                 comments={comments}
                 selection={selection}

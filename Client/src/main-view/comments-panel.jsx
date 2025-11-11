@@ -11,7 +11,7 @@ function CommentsPanel({
     return (
         <>
             {/* Panel lateral de comentarios */}
-            <div className="w-64 bg-gray-900 p-3 overflow-y-auto border-l border-gray-700">
+            <div className="w-full bg-gray-900 p-3 overflow-y-auto border-l border-gray-700">
                 <h4 className="text-white font-bold mb-3 text-sm">
                     Comentarios ({comments.length})
                 </h4>

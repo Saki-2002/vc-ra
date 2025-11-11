@@ -72,7 +72,7 @@ function handleCodeEditor(app, io) {
 
         socket.on("requestCurrentComments", (roomId, callback) => {
             const currentComments = roomsComments.get(roomId) || []
-            callback({commments: currentComments})
+            callback({comments: currentComments})
         })
 
         socket.on("input", (input) => {
@@ -99,14 +99,6 @@ function handleCodeEditor(app, io) {
             roomsComments.set(roomId, filtered)
 
             io.to(roomId).emit("commentDeleted", {commentId})
-        })
-
-        socket.on("selectionChanged", ({roomId, selection, username}) => {
-            socket.to(roomId).emit("remoteSelection", {
-                socketId: socket.id,
-                username,
-                selection
-            })
         })
 
         socket.on("kill", () => {
