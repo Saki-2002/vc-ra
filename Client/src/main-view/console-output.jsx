@@ -60,7 +60,7 @@ function ConsoleOutput({ roomId }) {
 
     return (
         <div className="w-full h-full flex flex-1 flex-col">
-            <div className="bg-gray-800 w-full p-2 flex justify-between items-center h-10">
+            <div className="bg-gray-800 w-full p-2 flex justify-between items-center h-10 rounded-t-2xl">
                 <h1 className="text-white font-bold">
                     Consola Python
                 </h1>
@@ -71,7 +71,7 @@ function ConsoleOutput({ roomId }) {
                 </button>
             </div>
             <div
-                className=" bg-black flex flex-1 flex-col overflow-y-auto p-2 font-mono text-sm"
+                className=" bg-black flex flex-1 flex-col overflow-y-auto p-2 font-mono text-sm rounded-b-2xl"
                 ref={consoleRef}
                 onClick={() => inputRef.current?.focus()}
             >

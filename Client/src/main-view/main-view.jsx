@@ -12,6 +12,7 @@ import { useLocation, useParams } from "react-router-dom"
 import LoadingScreen from "./loading-screen"
 import * as handleConnection from "../logic/connectionVideoConference"
 import ConsoleOutput from "./console-output"
+import CommentsPanel from "./comments-panel"
 import HostView from "./host-view"
 
 
@@ -32,6 +33,17 @@ function MainView() {
     const [remotePeers, setRemotePeers] = useState(new Map())
 
 
+    const [commentData, setCommentData] = useState({
+        comments: [],
+        selection: null,
+        showCommentInput: false,
+        commentText: "",
+        setShowCommentInput: () => { },
+        setCommentText: () => { },
+        handleAddComment: () => { },
+        handleDeleteComment: () => { }
+    })
+
     useEffect(() => {
 
         const initializeRoom = async () => {
@@ -51,13 +63,13 @@ function MainView() {
                 setRemoteStreams(handleConnection.getMediaTracks())
                 setRemotePeers(handleConnection.getPeers())
                 setCargando(false)
-            } catch(err){
+            } catch (err) {
                 console.error("Error al Inicializar Room. Por favor volver a cargar la página")
             }
         }
         initializeRoom()
 
-        return() => {
+        return () => {
             handleConnection.setMediaTracksUpdateCallback(null)
             handleConnection.setPeersUpdateCallback(null)
         }
@@ -84,24 +96,41 @@ function MainView() {
                 <LoadingScreen /> :
                 <>
                     <div className=" bg-gray-500 h-screen flex flex-col md:flex-row gap-4 items-stretch p-4">
-                        <div className="bg-amber-600 flex-1 flex flex-col gap-4 p-4 rounded-2xl overflow-hidden">
+                        <div className="bg-amber-600 md:w-1/3 w-full flex flex-col gap-4 p-4 rounded-2xl overflow-hidden">
                             <div className="bg-indigo-500 h-3/4 min-h-[100px] overflow-hidden flex flex-col">
-                                <CodeEditor roomId={roomId} isHost={isHost} username={username}/>
+                                <CodeEditor
+                                    roomId={roomId}
+                                    isHost={isHost}
+                                    username={username}
+                                    onCommentDataChange={setCommentData}    
+                                />
                             </div>
                             <div className="bg-rose-500 h-1/3 min-h-[50px]">
-                                <ConsoleOutput roomId={roomId}/>
+                                <ConsoleOutput roomId={roomId} />
                             </div>
+                        </div>
+                        <div className="bg-lime-700 md:w-1/3 rounded-2xl p-4 w-full overflow-y-auto">
+                            <CommentsPanel
+                                comments={commentData.comments}
+                                selection={commentData.selection}
+                                showCommentInput={commentData.showCommentInput}
+                                commentText={commentData.commentText}
+                                setShowCommentInput={commentData.setShowCommentInput}
+                                setCommentText={commentData.setCommentText}
+                                handleAddComment={commentData.handleAddComment}
+                                handleDeleteComment={commentData.handleDeleteComment}
+                            />
                         </div>
                         <div className="bg-emerald-500 md:w-1/3 w-full rounded-2xl p-4">
                             <div className="flex flex-wrap gap-2 h-1/6">
                                 {Array.from(remotePeers.entries()).map(([socketId, peerInfo]) => {
                                     //Crear MediaStream por cada peer
-                                    const tracks = remoteStreams.get(socketId)||{}
+                                    const tracks = remoteStreams.get(socketId) || {}
                                     const stream = new MediaStream()
-                                    if(tracks.audioTrack) stream.addTrack(tracks.audioTrack);
-                                    if(tracks.videoTrack) stream.addTrack(tracks.videoTrack);
+                                    if (tracks.audioTrack) stream.addTrack(tracks.audioTrack);
+                                    if (tracks.videoTrack) stream.addTrack(tracks.videoTrack);
 
-                                    const username = peerInfo?.username || `Peer-${String(socketId).slice(0,6)}`
+                                    const username = peerInfo?.username || `Peer-${String(socketId).slice(0, 6)}`
                                     return (
                                         <RemoteVideo
                                             key={socketId}

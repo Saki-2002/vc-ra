@@ -40,7 +40,7 @@ const commentField = StateField.define({
 })
 
 
-function CodeEditor({ roomId, isHost, username }) {
+function CodeEditor({ roomId, isHost, username, onCommentDataChange }) {
 
     const [code, setCode] = useState("")
     const [isExecuting, setIsExecuting] = useState(false)
@@ -59,7 +59,7 @@ function CodeEditor({ roomId, isHost, username }) {
         })
 
         handleConnection.requestCurrentComments(roomId, (currentComments) => {
-            setComments(currentComments)
+            setComments(currentComments || [])
         })
     }, [roomId])
 
@@ -93,15 +93,37 @@ function CodeEditor({ roomId, isHost, username }) {
         if (!view) return
 
         comments.forEach(comment => {
-            view.dispatch({
-                effects: addCommentMark.of({
-                    id: comment.id,
-                    from: comment.from,
-                    to: comment.to
+            if (comment.from !== undefined && comment.to !== undefined) {
+                view.dispatch({
+                    effects: addCommentMark.of({
+                        id: comment.id,
+                        from: comment.from,
+                        to: comment.to
+                    })
                 })
-            })
+            }
         })
     }, [comments])
+
+    useEffect(() => {
+        if (onCommentDataChange) {
+            onCommentDataChange({
+                comments,
+                selection,
+                showCommentInput,
+                commentText,
+                setShowCommentInput,
+                setCommentText,
+                handleAddComment,
+                handleDeleteComment
+            })
+        }
+    }, [
+        comments,
+        selection,
+        showCommentInput,
+        commentText,
+    ])
 
     const handleChange = (value) => {
 
@@ -136,12 +158,14 @@ function CodeEditor({ roomId, isHost, username }) {
 
         const newComment = {
             id: `comment-${Date.now()}`,
-            from: selection.from,
-            to: selection.to,
             text: commentText,
-            codeSnippet: selection.text,
             username: username,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            ...(selection && {
+                from: selection.from,
+                to: selection.to,
+                codeSnippet: selection.text
+            })
         }
 
         handleConnection.emitAddComment(roomId, newComment)
@@ -152,6 +176,14 @@ function CodeEditor({ roomId, isHost, username }) {
     }
 
     const handleDeleteComment = (commentId) => {
+
+        const view = editorRef.current?.view
+
+        if (view) {
+            view.dispatch({
+                effects: removeCommentMark.of(commentId)
+            })
+        }
         handleConnection.emitDeleteComment(roomId, commentId)
     }
 
@@ -164,19 +196,17 @@ function CodeEditor({ roomId, isHost, username }) {
 
 
     return (
-        <div className="flex flex-col h-full relative overflow-hidden min-h-0">
+        <div className="flex flex-col h-full relative overflow-hidden min-h-0 rounded-2xl">
             <div className="flex flex-1 flex-col overflow-hidden">
                 <div className="bg-gray-800 p-2 flex justify-between items-center">
                     <h3 className="text-white font-bold">Editor de Python</h3>
                     <div className="flex gap-2">
-                        {selection && (
-                            <button
-                                className="bg-yellow-500 px-3 py-1 rounded text-sm"
-                                onClick={() => setShowCommentInput(true)}
-                            >
-                                Comentar
-                            </button>
-                        )}
+                        <button
+                            className="bg-yellow-500 px-3 py-1 rounded text-sm"
+                            onClick={() => setShowCommentInput(true)}
+                        >
+                            Comentar
+                        </button>
                     </div>
                     <button
                         className={`px-4 py-1 rounded ${isExecuting ? "bg-gray-500 cursor-not-allowed" : "bg-green-500 hover:bg-green-600"
@@ -224,16 +254,6 @@ function CodeEditor({ roomId, isHost, username }) {
                     }}
                 />
             </div>
-            <CommentsPanel
-                comments={comments}
-                selection={selection}
-                showCommentInput={showCommentInput}
-                commentText={commentText}
-                setShowCommentInput={setShowCommentInput}
-                setCommentText={setCommentText}
-                handleAddComment={handleAddComment}
-                handleDeleteComment={handleDeleteComment}
-            />
         </div>
     )
 
