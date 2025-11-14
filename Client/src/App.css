@@ -1,17 +1,24 @@
+.comment-highlight-yellow {
+    background-color: rgba(234, 179, 8, 0.2);
+    border-bottom: 2px solid rgb(234, 179, 8);
+}
+
+.comment-highlight-orange {
+    background-color: rgba(249, 115, 22, 0.2);
+    border-bottom: 2px solid rgb(249, 115, 22);
+}
+
+.comment-highlight-green {
+    background-color: rgba(34, 197, 94, 0.2);
+    border-bottom: 2px solid rgb(34, 197, 94);
+}
+
+.comment-highlight-cyan {
+    background-color: rgba(20, 75, 148, 0.2);
+    border-bottom: 2px solid rgb(20, 75, 148);
+}
+
 .comment-highlight {
-    background-color: rgba(255, 255, 0, 0.5);
-    border-bottom: 2px solid #ffd700;
-}
-
-.comment-highlight:hover {
-    background-color: rgba(255, 255, 0, 0.8);
-}
-
-.remote-selection {
-    background-color: rgba(100, 200, 255, 0.3);
-    border: 1px dashed #64c8ff
-}
-
-.remote-selection:hover {
-    background-color: rgba(100, 200, 255, 0.5);
+    background-color: rgba(59, 130, 246, 0.2);
+    border-bottom: 2px solid rgb(59, 130, 246);
 }

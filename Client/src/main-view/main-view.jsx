@@ -1,7 +1,7 @@
 //======================
 //       IMPORTS
 //======================
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import "../App.css"
 import LocalVideo from "./local-video"
 import RemoteVideo from "./remote-video"
@@ -38,11 +38,17 @@ function MainView() {
         selection: null,
         showCommentInput: false,
         commentText: "",
+        selectedTag: null,
         setShowCommentInput: () => { },
         setCommentText: () => { },
         handleAddComment: () => { },
-        handleDeleteComment: () => { }
+        handleDeleteComment: () => { },
+        handleReaction: () => { }
     })
+
+    const handleCommentDataChange = useCallback((data) => {
+        setCommentData(data)
+    }, [])
 
     useEffect(() => {
 
@@ -102,7 +108,7 @@ function MainView() {
                                     roomId={roomId}
                                     isHost={isHost}
                                     username={username}
-                                    onCommentDataChange={setCommentData}    
+                                    onCommentDataChange={handleCommentDataChange}    
                                 />
                             </div>
                             <div className="bg-rose-500 h-1/3 min-h-[50px]">
@@ -115,10 +121,13 @@ function MainView() {
                                 selection={commentData.selection}
                                 showCommentInput={commentData.showCommentInput}
                                 commentText={commentData.commentText}
+                                selectedTag={commentData.selectedTag}
                                 setShowCommentInput={commentData.setShowCommentInput}
                                 setCommentText={commentData.setCommentText}
                                 handleAddComment={commentData.handleAddComment}
                                 handleDeleteComment={commentData.handleDeleteComment}
+                                handleReaction={commentData.handleReaction}
+                                isHost={isHost}
                             />
                         </div>
                         <div className="bg-emerald-500 md:w-1/3 w-full rounded-2xl p-4">

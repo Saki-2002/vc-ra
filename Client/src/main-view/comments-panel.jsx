@@ -1,13 +1,18 @@
+import { useState } from "react"
+
 function CommentsPanel({
     comments = [],
     selection,
     showCommentInput,
-    commentText,
     setShowCommentInput,
-    setCommentText,
     handleAddComment,
     handleDeleteComment,
+    handleReaction,
+    selectedTag,
+    isHost
 }) {
+
+    const [commentText, setCommentText] = useState("")
 
     const reactionButtons = [
         { emoji: "😵‍💫", tag: "Confusion", color: "bg-yellow-500", hoverColor: "hover:bg-yellow-600", title: "No entendí" },
@@ -21,6 +26,30 @@ function CommentsPanel({
         return button ? button.color : "bg-gray-500"
     }
 
+    const getEmoji = (tag) => {
+
+        if (tag === null) {
+            return "💬"
+        }
+        const emojis = {
+            "Confusion": "😵‍💫",
+            "Velocidad": "⌛",
+            "Entendido": "✅",
+            "Repetir": "🔁"
+        }
+        return emojis[tag]
+    }
+
+    const handleCancel = () => {
+        setShowCommentInput(false)
+        setCommentText("")
+    }
+
+    const handleSubmit = () => {
+        handleAddComment(null, commentText)
+        setCommentText("")
+    }
+
     return (
         <>
             {/* Panel lateral de comentarios */}
@@ -28,7 +57,7 @@ function CommentsPanel({
                 <div className="flex h-1/6">
                     <div className="bg-red-500 w-1/3 h-full items-center justify-center flex">
                         {selection &&
-                            <h1 className="bg-cyan-500 rounded-2xl text-center items-center justify-center flex w-2/3">
+                            <h1 className="bg-cyan-500 rounded-2xl text-center items-center justify-center flex w-5/6 ">
                                 Selección
                             </h1>
                         }
@@ -41,11 +70,7 @@ function CommentsPanel({
                                 className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition-colors ${btn.color} ${btn.hoverColor}`}
                                 title={btn.title}
                                 onClick={() => {
-                                    if (selection) {
-                                        addComment(btn.tag)
-                                    } else {
-                                        console.log(`[${btn.tag}] Sin selección`)
-                                    }
+                                    handleAddComment(btn.tag)
                                 }}
                             >
                                 {btn.emoji}
@@ -72,7 +97,7 @@ function CommentsPanel({
                                 <div className="flex justify-between items-start mb-1">
                                     <div className="flex items-center gap-2">
                                         <span className="text-yellow-400">
-                                            {comment.codeSnippet ? "💬" : "📝"}
+                                            {getEmoji(comment.tag)}
                                         </span>
                                         {comment.tag && (
                                             <span className={`${getTagColor(comment.tag)} text-white text-[10px] px-2 py-0.5 rounded-full font-semibold`}>
@@ -80,10 +105,21 @@ function CommentsPanel({
                                             </span>
                                         )}
                                     </div>
+                                    {isHost && (
+                                        <button
+                                            className="text-green-400 hover:text-green-500 text-lg leading-none"
+                                            onClick={() => handleDeleteComment(comment.id)}
+                                            title="Marcar como Resuelto"
+                                        >
+                                            ✓
+                                        </button>
+                                    )}
                                 </div>
-                                <p className="text-white mb-2 break-words">
-                                    {comment.text}
-                                </p>
+                                {comment.text && (
+                                    <p className="text-white mb-2 break-words">
+                                        {comment.text}
+                                    </p>
+                                )}
                                 {comment.codeSnippet && (
                                     <code className="text-blue-300 text-xs block bg-gray-900 p-1 rounded overflow-x-auto">
                                         {comment.codeSnippet}
@@ -99,10 +135,14 @@ function CommentsPanel({
             {showCommentInput && (
                 <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
                     <div className="bg-gray-800 p-5 rounded-lg w-96 shadow-2xl">
-                        <h3 className="text-white font-bold mb-3 text-lg">
-                            Agregar Comentario
-                        </h3>
-
+                        <div className="w-full h-full flex justify-center items-center gap-10">
+                            <h3 className="text-white font-bold mb-3 text-lg">
+                                Agregar Comentario
+                            </h3>
+                            <h3 className={`${getTagColor(selectedTag)} text-white font-bold mb-3 text-lg`}>
+                                {selectedTag}
+                            </h3>
+                        </div>
                         {/* Vista previa del código seleccionado */}
                         <div className="bg-gray-900 p-3 rounded mb-3 max-h-32 overflow-auto">
                             <p className="text-gray-400 text-xs mb-1">Código seleccionado:</p>
@@ -125,20 +165,13 @@ function CommentsPanel({
                         <div className="flex gap-2 justify-end">
                             <button
                                 className="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded text-white text-sm transition-colors"
-                                onClick={() => {
-                                    setShowCommentInput(false)
-                                    setCommentText("")
-                                }}
+                                onClick={handleCancel}
                             >
                                 Cancelar
                             </button>
                             <button
-                                className={`px-4 py-2 rounded text-white text-sm transition-colors ${commentText.trim()
-                                    ? "bg-blue-500 hover:bg-blue-600"
-                                    : "bg-blue-300 cursor-not-allowed"
-                                    }`}
-                                onClick={handleAddComment}
-                                disabled={!commentText.trim()}
+                                className="px-4 py-2 rounded text-white text-sm transition-colors bg-blue-500 hover:bg-blue-600"
+                                onClick={handleSubmit}
                             >
                                 Agregar
                             </button>

@@ -1,14 +1,23 @@
 import CodeMirror from "@uiw/react-codemirror"
 import { python } from "@codemirror/lang-python"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import * as handleConnection from "../logic/connectionCodeEditor"
 import { EditorView, Decoration } from "@codemirror/view"
 import { StateField, StateEffect } from "@codemirror/state"
 import { EditorState } from "@codemirror/state"
-import CommentsPanel from "./comments-panel"
 
 const addCommentMark = StateEffect.define()
 const removeCommentMark = StateEffect.define()
+
+const getHighlightClass = (tag) => {
+    const classMap = {
+        "Confusion": "comment-highlight-yellow",
+        "Velocidad": "comment-highlight-orange",
+        "Entendido": "comment-highlight-green",
+        "Repetir": "comment-highlight-cyan",
+    }
+    return classMap[tag] || "comment-highlight"
+}
 
 const commentField = StateField.define({
 
@@ -22,7 +31,7 @@ const commentField = StateField.define({
             if (effect.is(addCommentMark)) {
                 decorations = decorations.update({
                     add: [Decoration.mark({
-                        class: "comment-highlight",
+                        class: getHighlightClass(effect.value.tag),
                         attributes: { "data-comment-id": effect.value.id }
                     }).range(effect.value.from, effect.value.to)]
                 })
@@ -51,7 +60,23 @@ function CodeEditor({ roomId, isHost, username, onCommentDataChange }) {
     const [comments, setComments] = useState([])
     const [selection, setSelection] = useState(null)
     const [showCommentInput, setShowCommentInput] = useState(false)
-    const [commentText, setCommentText] = useState("")
+    const [selectedTag, setSelectedTag] = useState(null)
+
+    const selectionRef = useRef(null)
+    const showCommentInputRef = useRef(false)
+    const selectedTagRef = useRef(null)
+
+    useEffect(() => {
+        selectionRef.current = selection
+    }, [selection])
+    
+    useEffect(() => {
+        showCommentInputRef.current = showCommentInput
+    }, [showCommentInput])
+
+    useEffect(() => {
+        selectedTagRef.current = selectedTag
+    }, [selectedTag])
 
     useEffect(() => {
         handleConnection.requestCurrentCode(roomId, (currentCode) => {
@@ -98,32 +123,13 @@ function CodeEditor({ roomId, isHost, username, onCommentDataChange }) {
                     effects: addCommentMark.of({
                         id: comment.id,
                         from: comment.from,
-                        to: comment.to
+                        to: comment.to,
+                        tag: comment.tag
                     })
                 })
             }
         })
     }, [comments])
-
-    useEffect(() => {
-        if (onCommentDataChange) {
-            onCommentDataChange({
-                comments,
-                selection,
-                showCommentInput,
-                commentText,
-                setShowCommentInput,
-                setCommentText,
-                handleAddComment,
-                handleDeleteComment
-            })
-        }
-    }, [
-        comments,
-        selection,
-        showCommentInput,
-        commentText,
-    ])
 
     const handleChange = (value) => {
 
@@ -153,29 +159,51 @@ function CodeEditor({ roomId, isHost, username, onCommentDataChange }) {
         }
     }
 
-    const handleAddComment = () => {
-        if (!selection || !commentText.trim()) return;
+    const handleAddComment = useCallback((tag = null, commentText = "") => {
+
+        const currentSelection = selectionRef.current
+        const currentShowCommentInput = showCommentInputRef.current
+        const currentSelectedTag = selectedTagRef.current
+
+        if (!currentSelection) {
+            handleReaction(tag)
+            return
+        }
+
+        if (tag && !currentShowCommentInput) {
+            setSelectedTag(tag)
+            setShowCommentInput(true)
+            return
+        }
+
+        const effectiveTag = currentSelectedTag || tag || null
+
+        const finalText = commentText.trim() || ""
 
         const newComment = {
             id: `comment-${Date.now()}`,
-            text: commentText,
+            text: finalText,
             username: username,
             timestamp: Date.now(),
-            ...(selection && {
-                from: selection.from,
-                to: selection.to,
-                codeSnippet: selection.text
-            })
+            tag: effectiveTag,
+            from: currentSelection.from,
+            to: currentSelection.to,
+            codeSnippet: currentSelection.text
         }
 
         handleConnection.emitAddComment(roomId, newComment)
 
-        setCommentText("")
+        setSelectedTag(null)
         setShowCommentInput(false)
         setSelection(null)
-    }
 
-    const handleDeleteComment = (commentId) => {
+    }, [username, roomId])
+
+    const handleReaction = useCallback((tag) => {
+        console.log("TAG: ", tag)
+    }, [])
+
+    const handleDeleteComment = useCallback((commentId) => {
 
         const view = editorRef.current?.view
 
@@ -185,7 +213,7 @@ function CodeEditor({ roomId, isHost, username, onCommentDataChange }) {
             })
         }
         handleConnection.emitDeleteComment(roomId, commentId)
-    }
+    }, [roomId])
 
     const executeCode = async () => {
         if (isExecuting || !code.trim()) return
@@ -194,20 +222,32 @@ function CodeEditor({ roomId, isHost, username, onCommentDataChange }) {
 
 
 
+    useEffect(() => {
+        if (onCommentDataChange) {
+            onCommentDataChange({
+                comments,
+                selection,
+                showCommentInput,
+                selectedTag,
+                setShowCommentInput,
+                handleAddComment,
+                handleDeleteComment,
+                handleReaction
+            })
+        }
+    }, [
+        comments,
+        selection,
+        showCommentInput,
+        selectedTag,
+        onCommentDataChange
+    ])
 
     return (
         <div className="flex flex-col h-full relative overflow-hidden min-h-0 rounded-2xl">
             <div className="flex flex-1 flex-col overflow-hidden">
                 <div className="bg-gray-800 p-2 flex justify-between items-center">
                     <h3 className="text-white font-bold">Editor de Python</h3>
-                    <div className="flex gap-2">
-                        <button
-                            className="bg-yellow-500 px-3 py-1 rounded text-sm"
-                            onClick={() => setShowCommentInput(true)}
-                        >
-                            Comentar
-                        </button>
-                    </div>
                     <button
                         className={`px-4 py-1 rounded ${isExecuting ? "bg-gray-500 cursor-not-allowed" : "bg-green-500 hover:bg-green-600"
                             }`}
@@ -245,7 +285,7 @@ function CodeEditor({ roomId, isHost, username, onCommentDataChange }) {
                         autocompletion: true,
                         crosshairCursor: true,
                         highlightActiveLine: true,
-                        highlightSelectionMatches: true,
+                        highlightSelectionMatches: false,
                         closeBracketsKeymap: true,
                         searchKeymap: true,
                         foldKeymap: true,
