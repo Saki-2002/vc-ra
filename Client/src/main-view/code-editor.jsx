@@ -11,10 +11,11 @@ const removeCommentMark = StateEffect.define()
 
 const getHighlightClass = (tag) => {
     const classMap = {
-        "Confusion": "comment-highlight-yellow",
-        "Velocidad": "comment-highlight-orange",
-        "Entendido": "comment-highlight-green",
-        "Repetir": "comment-highlight-cyan",
+        "No entendí": "comment-highlight-yellow",
+        "Va muy rápido": "comment-highlight-orange",
+        "Todo claro": "comment-highlight-green",
+        "Volver a explicar": "comment-highlight-cyan",
+        "temp-highlight": "comment-highlight-temp-highlight"
     }
     return classMap[tag] || "comment-highlight"
 }
@@ -61,10 +62,22 @@ function CodeEditor({ roomId, isHost, username, onCommentDataChange }) {
     const [selection, setSelection] = useState(null)
     const [showCommentInput, setShowCommentInput] = useState(false)
     const [selectedTag, setSelectedTag] = useState(null)
+    const [tempHighlightId, setTempHighlightId] = useState(null)
+    const [floatingEmojis, setFloatingEmojis] = useState([])
 
+    const usedReactionRef = useRef(false)
     const selectionRef = useRef(null)
     const showCommentInputRef = useRef(false)
     const selectedTagRef = useRef(null)
+
+    const lastSelectionRef = useRef({from: null, to: null})
+
+    const tagToEmojiRef = useRef({
+        "No entendí": "🤔",
+        "Va muy rápido": "🏃",
+        "Todo claro": "✅",
+        "Volver a explicar": "🔁",
+    })    
 
     useEffect(() => {
         selectionRef.current = selection
@@ -107,9 +120,15 @@ function CodeEditor({ roomId, isHost, username, onCommentDataChange }) {
             },
             null
         )
+
+        handleConnection.setupReactionListener((reaction) => {
+            showFloatingEmoji(reaction)
+        })
+
         return () => {
             handleConnection.cleanupCodeChangeListener()
             handleConnection.cleanupCommentListeners()
+            handleConnection.cleanupReactionListener()
         }
     }, [])
 
@@ -131,6 +150,55 @@ function CodeEditor({ roomId, isHost, username, onCommentDataChange }) {
         })
     }, [comments])
 
+    useEffect(()=> {
+        if(!tempHighlightId) return;
+        const view = editorRef.current?.view
+        if (!view) return;
+        const comment = comments.find(c => c.id === tempHighlightId)
+        if (!comment) return;
+
+        view.dispatch({
+            effects: addCommentMark.of({
+                id: `temp-${tempHighlightId}`,
+                from: comment.from,
+                to: comment.to,
+                tag: "temp-highlight"
+            })
+        })
+
+        const timer = setTimeout(() => {
+            view.dispatch({
+                effects: removeCommentMark.of(`temp-${tempHighlightId}`)
+            })
+            setTempHighlightId(null)
+        }, 2000)
+
+        return () => clearTimeout(timer)
+    }, [tempHighlightId])
+
+    const focusOnComment = useCallback((commentId) => {
+        const comment = comments.find(c => c.id === commentId)
+        if(!comment) return;
+
+        const view = editorRef.current?.view
+        if(!view) return;
+
+        view.dispatch({
+            effects: EditorView.scrollIntoView(comment.from, {
+                y: "center",
+                yMargin: 100
+            })
+        })
+
+        view.dispatch({
+            selection: {anchor: comment.from, head: comment.from}
+        })
+
+        view.focus()
+
+        setTempHighlightId(commentId)
+    }, [comments])
+
     const handleChange = (value) => {
 
         if (!isHost) return
@@ -144,20 +212,32 @@ function CodeEditor({ roomId, isHost, username, onCommentDataChange }) {
         isRemoteChange.current = false
     }
 
-    const handleSelectionChange = (viewUpdate) => {
+    const handleSelectionChange = useCallback((viewUpdate) => {
+        
+        if (!viewUpdate.selectionSet) return;
+
         const { state } = viewUpdate
         const { from, to } = state.selection.main
+        const lastSel = lastSelectionRef.current
 
-        if (from !== to) {
-            setSelection({
-                from,
-                to,
-                text: state.sliceDoc(from, to)
-            })
-        } else {
-            setSelection(null)
+        if (from === to) {
+            if (lastSel.from !== null || lastSel.to !== null) {
+                lastSelectionRef.current = {from: null, to: null}
+                setSelection(null)
+            }
+            return
         }
-    }
+        if (lastSel.from === from && lastSel.to === to ) {
+            return
+        }
+
+        lastSelectionRef.current = {from, to}
+        setSelection({
+            from,
+            to,
+            text: state.sliceDoc(from,to)
+        })
+    }, [])
 
     const handleAddComment = useCallback((tag = null, commentText = "") => {
 
@@ -196,12 +276,43 @@ function CodeEditor({ roomId, isHost, username, onCommentDataChange }) {
         setSelectedTag(null)
         setShowCommentInput(false)
         setSelection(null)
+        lastSelectionRef.current = {from: null, to: null}
 
     }, [username, roomId])
 
-    const handleReaction = useCallback((tag) => {
-        console.log("TAG: ", tag)
+    const showFloatingEmoji = useCallback((reaction) => {
+        const emoji = tagToEmojiRef.current[reaction.tag] || "💬"
+        const id = Date.now() + Math.random()
+        const newEmoji = {
+            id,
+            emoji,
+            tag: reaction.tag,
+            x: Math.random() * 70 + 15,
+            y: Math.random() * 60 + 20
+        }
+
+        setFloatingEmojis(prev => [...prev, newEmoji])
+
+        setTimeout(() => {
+            setFloatingEmojis(prev => prev.filter(e => e.id !== id))
+        }, 3000)
     }, [])
+
+    const handleReaction = useCallback((tag) => {
+
+        if(usedReactionRef.current) {
+            return
+        }
+
+        usedReactionRef.current= true 
+        
+        const reaction = {tag}
+        handleConnection.emitReaction(roomId, reaction) 
+        
+        setTimeout(()=>{
+            usedReactionRef.current = false
+        }, 2000)
+    }, [roomId])
 
     const handleDeleteComment = useCallback((commentId) => {
 
@@ -232,7 +343,8 @@ function CodeEditor({ roomId, isHost, username, onCommentDataChange }) {
                 setShowCommentInput,
                 handleAddComment,
                 handleDeleteComment,
-                handleReaction
+                handleReaction,
+                focusOnComment
             })
         }
     }, [
@@ -240,11 +352,25 @@ function CodeEditor({ roomId, isHost, username, onCommentDataChange }) {
         selection,
         showCommentInput,
         selectedTag,
-        onCommentDataChange
+        onCommentDataChange,
     ])
 
     return (
         <div className="flex flex-col h-full relative overflow-hidden min-h-0 rounded-2xl">
+            {floatingEmojis.map(emoji => (
+                <div
+                    key={emoji.id}
+                    className="fixed z-50 pointer-events-none animate-float-up"
+                    style={{
+                        left: `${emoji.x}%`,
+                        top: `${emoji.y}%`
+                    }}
+                >
+                    <div className="text-5xl drop-shadow-[0_6px_16px-rgba(0,0,0,0.9)]">
+                        {emoji.emoji}
+                    </div>
+                </div>
+            ))}
             <div className="flex flex-1 flex-col overflow-hidden">
                 <div className="bg-gray-800 p-2 flex justify-between items-center">
                     <h3 className="text-white font-bold">Editor de Python</h3>
@@ -254,7 +380,7 @@ function CodeEditor({ roomId, isHost, username, onCommentDataChange }) {
                         onClick={executeCode}
                         disabled={isExecuting}
                     >
-                        {isExecuting ? "Ejecutando..." : "Ejecutar"}
+                        {isExecuting ? "⏳" : "▶️"}
                     </button>
                 </div>
                 <CodeMirror

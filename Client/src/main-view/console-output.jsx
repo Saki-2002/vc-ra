@@ -67,7 +67,7 @@ function ConsoleOutput({ roomId }) {
                 <button
                     onClick={clearConsole}
                     className="bg-white rounded px-4 py-1 font-semibold">
-                    {isExecuting ? "Cancelar Ejecución" : "Limpiar Consola"}
+                    {isExecuting ? "Cancelar" : "Limpiar"}
                 </button>
             </div>
             <div

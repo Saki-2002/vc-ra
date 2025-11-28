@@ -109,6 +109,11 @@ function handleCodeEditor(app, io) {
             }
         })
 
+        socket.on("sendReaction", ({roomId, reaction}) => {
+            console.log(`Reacción ${reaction.tag} en ${roomId}`)
+            io.to(roomId).emit("reactionReceived", { reaction })
+        })
+
         socket.on("disconnect", () => {
             console.log("Cliente desconectado: ", socket.id)
         })

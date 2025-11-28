@@ -9,16 +9,18 @@ function CommentsPanel({
     handleDeleteComment,
     handleReaction,
     selectedTag,
-    isHost
+    isHost,
+    focusOnComment
 }) {
 
     const [commentText, setCommentText] = useState("")
+    const [activeFilters, setActiveFilters] = useState([])
 
     const reactionButtons = [
-        { emoji: "😵‍💫", tag: "Confusion", color: "bg-yellow-500", hoverColor: "hover:bg-yellow-600", title: "No entendí" },
-        { emoji: "⌛", tag: "Velocidad", color: "bg-orange-500", hoverColor: "hover:bg-orange-600", title: "Va muy rápido" },
-        { emoji: "✅", tag: "Entendido", color: "bg-green-500", hoverColor: "hover:bg-green-600", title: "Todo claro" },
-        { emoji: "🔁", tag: "Repetir", color: "bg-cyan-500", hoverColor: "hover:bg-cyan-600", title: "Repita por favor" },
+        { emoji: "🤔", tag: "No entendí", color: "bg-yellow-500/70", hoverColor: "hover:bg-yellow-600/100", title: "No entendí" },
+        { emoji: "🏃", tag: "Va muy rápido", color: "bg-orange-500/70", hoverColor: "hover:bg-orange-600/100", title: "Va muy rápido" },
+        { emoji: "✅", tag: "Todo claro", color: "bg-green-500/70", hoverColor: "hover:bg-green-600/100", title: "Todo claro" },
+        { emoji: "🔁", tag: "Volver a explicar", color: "bg-cyan-500/70", hoverColor: "hover:bg-cyan-600/100", title: "Volver a explicar" },
     ]
 
     const getTagColor = (tag) => {
@@ -32,10 +34,10 @@ function CommentsPanel({
             return "💬"
         }
         const emojis = {
-            "Confusion": "😵‍💫",
-            "Velocidad": "⌛",
-            "Entendido": "✅",
-            "Repetir": "🔁"
+            "No entendí": "🤔",
+            "Va muy rápido": "🏃",
+            "Todo claro": "✅",
+            "Volver a explicar": "🔁"
         }
         return emojis[tag]
     }
@@ -50,19 +52,37 @@ function CommentsPanel({
         setCommentText("")
     }
 
+    const toggleFilter = (tag) => {
+        setActiveFilters(prev => {
+            if (prev.includes(tag)) {
+                return prev.filter(t => t !== tag)
+            } else {
+                return [...prev, tag]
+            }
+        })
+    }
+
+    const clearFilters = () => {
+        setActiveFilters([])
+    }
+
+    const filteredComments = activeFilters.length === 0
+        ? comments
+        : comments.filter(comment => activeFilters.includes(comment.tag))
+
     return (
         <>
             {/* Panel lateral de comentarios */}
             <div className="w-full bg-gray-900 p-3 overflow-y-auto border-l border-gray-700 rounded-2xl h-full">
                 <div className="flex h-1/6">
-                    <div className="bg-red-500 w-1/3 h-full items-center justify-center flex">
+                    <div className="w-1/3 h-full items-center justify-center flex">
                         {selection &&
                             <h1 className="bg-cyan-500 rounded-2xl text-center items-center justify-center flex w-5/6 ">
                                 Selección
                             </h1>
                         }
                     </div>
-                    <div className="bg-purple-500 w-2/3 h-full items-center justify-center flex gap-2">
+                    <div className="w-2/3 h-full items-center justify-center flex gap-2">
                         {/* Buttons */}
                         {reactionButtons.map((btn) => (
                             <button
@@ -76,59 +96,105 @@ function CommentsPanel({
                                 {btn.emoji}
                             </button>
                         ))}
-
                     </div>
                 </div>
+
+                <div className="mb-3 pb-3 border-b border-gray-700">
+                    <div className="flex items-center justify-between mb-2">
+                        <h5 className="text-gray-400 text-xs font-semibold">
+                            Filtrar por:
+                        </h5>
+                        {activeFilters.length > 0 && (
+                            <button
+                                className="text-xs text-blue-400 hover:text-blue-300"
+                                onClick={clearFilters}
+                            >
+                                Limpiar filtros
+                            </button>
+                        )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {reactionButtons.map((btn) => {
+                            const isActive = activeFilters.includes(btn.tag)
+                            return (
+                                <button
+                                    key={`filter-${btn.tag}`}
+                                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${isActive
+                                            ? `${btn.color} text-white ring-2 ring-white`
+                                            : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                                        }`}
+                                    onClick={() => toggleFilter(btn.tag)}
+                                >
+                                    {btn.emoji} {btn.tag}
+                                </button>
+                            )
+                        })}
+                    </div>
+                    {activeFilters.length > 0 && (
+                        <p className="text-gray-500 text-xs mt-2">
+                            Mostrando {filteredComments.length} de {comments.length} comentarios
+                        </p>
+                    )}
+                </div>
+
                 <h4 className="text-white font-bold mb-3 text-sm">
-                    Comentarios ({comments.length})
+                    Comentarios ({filteredComments.length})
                 </h4>
 
-                {comments.length === 0 ? (
-                    <p className="text-gray-500 text-xs italic">
-                        Selecciona código y haz click en "Comentar"
-                    </p>
-                ) : (
-                    <div className="space-y-2">
-                        {comments.map(comment => (
-                            <div
-                                key={comment.id}
-                                className="bg-gray-800 p-2 rounded text-xs hover:bg-gray-700 transition-colors"
-                            >
-                                <div className="flex justify-between items-start mb-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-yellow-400">
-                                            {getEmoji(comment.tag)}
-                                        </span>
-                                        {comment.tag && (
-                                            <span className={`${getTagColor(comment.tag)} text-white text-[10px] px-2 py-0.5 rounded-full font-semibold`}>
-                                                {comment.tag}
+                <div className="flex-1 overflow-y-auto">
+                    {filteredComments.length === 0 ? (
+                        <p className="text-gray-500 text-xs italic">
+                            {activeFilters.length > 0
+                                ? "No hay comentarios con estos filtros"
+                                : "Selecciona código y haz click en un botón de reacción"}
+                        </p>
+                    ) : (
+                        <div className="space-y-2">
+                            {filteredComments.map(comment => (
+                                <div
+                                    key={comment.id}
+                                    className="bg-gray-800 p-2 rounded text-xs hover:bg-gray-700 transition-colors"
+                                    onClick={() => focusOnComment && focusOnComment(comment.id)}
+                                >
+                                    <div className="flex justify-between items-start mb-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-yellow-400">
+                                                {getEmoji(comment.tag)}
                                             </span>
+                                            {comment.tag && (
+                                                <span className={`${getTagColor(comment.tag)} text-white text-[10px] px-2 py-0.5 rounded-full font-semibold`}>
+                                                    {comment.tag}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {isHost && (
+                                            <button
+                                                className="text-green-400 hover:text-green-500 text-lg leading-none"
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    handleDeleteComment(comment.id)}
+                                                } 
+                                                title="Marcar como Resuelto"
+                                            >
+                                                ✓
+                                            </button>
                                         )}
                                     </div>
-                                    {isHost && (
-                                        <button
-                                            className="text-green-400 hover:text-green-500 text-lg leading-none"
-                                            onClick={() => handleDeleteComment(comment.id)}
-                                            title="Marcar como Resuelto"
-                                        >
-                                            ✓
-                                        </button>
+                                    {comment.text && (
+                                        <p className="text-white mb-2 break-words">
+                                            {comment.text}
+                                        </p>
+                                    )}
+                                    {comment.codeSnippet && (
+                                        <code className="text-blue-300 text-xs block bg-gray-900 p-1 rounded overflow-x-auto">
+                                            {comment.codeSnippet}
+                                        </code>
                                     )}
                                 </div>
-                                {comment.text && (
-                                    <p className="text-white mb-2 break-words">
-                                        {comment.text}
-                                    </p>
-                                )}
-                                {comment.codeSnippet && (
-                                    <code className="text-blue-300 text-xs block bg-gray-900 p-1 rounded overflow-x-auto">
-                                        {comment.codeSnippet}
-                                    </code>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                )}
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Modal para agregar comentario */}

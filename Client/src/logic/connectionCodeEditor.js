@@ -9,6 +9,7 @@ let setCodeRef = null
 let onCommentAddedRef = null
 let onCommentDeletedRef = null
 let onRemoteSelectionRef = null
+let onReactionReceivedRef = null
 
 const setupConsoleListeners = (addOutput, setIsExecuting_co) => {
 
@@ -146,6 +147,25 @@ const cleanupCommentListeners = () => {
     socket.off("remoteSelection")
 }
 
+const emitReaction = (roomId, reaction) => {
+    socket.emit("sendReaction", {roomId, reaction})
+}
+
+const setupReactionListener = (onReactionReceived) => {
+    onReactionReceivedRef = onReactionReceived
+    
+    socket.off("reactionReceived")
+
+    socket.on("reactionReceived", ({reaction})=>{
+        console.log("Reacción recibida")
+        onReactionReceivedRef && onReactionReceivedRef(reaction)
+    })
+}
+
+const cleanupReactionListener = () => {
+    socket.off("reactionReceived")
+}
+
 export {
     runCode,
     setupExecutionListeners,
@@ -161,5 +181,8 @@ export {
     emitDeleteComment,
     emitSelectionChange,
     setupCommentListeners,
-    cleanupCommentListeners
+    cleanupCommentListeners,
+    emitReaction,
+    setupReactionListener,
+    cleanupReactionListener
 }

@@ -12,18 +12,18 @@ import { useNavigate } from "react-router-dom"
 function Starting_View() {
 
 
-//======================
-//		CONSTANTES
-//======================
+	//======================
+	//		CONSTANTES
+	//======================
 
 	const navigate = useNavigate()
 	const [roomId, setRoomId] = useState("")
 	const [username, setUsername] = useState("")
 
 
-//======================
-//		FUNCIONES
-//======================
+	//======================
+	//		FUNCIONES
+	//======================
 
 	//(async) joinRoom
 	//Entradas: RoomId, username
@@ -31,8 +31,8 @@ function Starting_View() {
 	// navega a */room/{roomId} [main-view]
 	//Salida: Ninguna
 	const joinRoom = async (roomId, username) => {
-		if(!roomId) return
-		if(!username) return
+		if (!roomId) return
+		if (!username) return
 		//Unirse a sala
 		const isHost = false
 		await handleConnection.joinRoom(roomId, username, isHost)
@@ -57,9 +57,9 @@ function Starting_View() {
 	//Uso: Crea un codigo de 4 digitos al azar
 	//Salida: String de 4 digitos
 	const createCode = async () => {
-		for(let i=0; i<30; i++) {
-			const numero = Math.floor(Math.random()*10000)
-			const code = String(numero).padStart(4,"0")
+		for (let i = 0; i < 30; i++) {
+			const numero = Math.floor(Math.random() * 10000)
+			const code = String(numero).padStart(4, "0")
 			const available = await handleConnection.isRoomAvailable(code)
 			if (available) return code
 		}
@@ -68,51 +68,56 @@ function Starting_View() {
 
 
 
-//======================
-//	Vista HTML / CSS
-//======================
+	//======================
+	//	Vista HTML / CSS
+	//======================
 
-/*
-	Full-Screen RED
-		Filas: 3
-			1F-> Columnas: 2
-				1C -> Botón Crear Sala GREEN
-				2C -> Botón Unirse Sala BLUE
-			2F-> Input "Ingresa el Id de Sala..."
-			3F-> Input "Ingresa tu nombre de Usuario..."
-*/
+	/*
+		Full-Screen RED
+			Filas: 3
+				1F-> Columnas: 2
+					1C -> Botón Crear Sala GREEN
+					2C -> Botón Unirse Sala BLUE
+				2F-> Input "Ingresa el Id de Sala..."
+				3F-> Input "Ingresa tu nombre de Usuario..."
+	*/
 	return (
 		<>
-			<div className="bg-red-900 w-screen h-screen flex items-center justify-center">
+			<div className="bg-slate-700 w-screen h-screen flex items-center justify-center">
 				<div className="flex flex-col gap-4">
-					<div className="flex gap-4">
+					<h1 className="text-center text-5xl font-semibold text-white">
+						App. de Videoconferencia <br/> con comentarios anónimos
+					</h1>
+					<input
+						type="text"
+						className="bg-white px-2 py-1 rounded w-full my-10"
+						placeholder="Ingresa tu nombre de Usuario..."
+						value={username}
+						onChange={(e) => setUsername(e.target.value)}
+					/>
+					<div className="flex gap-20 items-center">
 						<button
-							className="bg-green-500 hover:bg-green-700 px-4 py-2 rounded w-1/2"
+							className="bg-green-500 hover:bg-green-700 px-4 py-2 rounded w-full h-1/2"
 							onClick={() => createRoom(username)}>
 							Crear Sala
 						</button>
-						<button
-							className="bg-blue-500 hover:bg-blue-700 px-4 py-2 rounded w-1/2"
-							onClick={() => joinRoom(roomId, username)}>
-							Unirse a Sala
-						</button>
+						<div className="flex flex-col gap-2 w-full">
+							<input
+								type="text"
+								className="bg-white px-2 py-1 rounded w-full"
+								placeholder="Id de la Sala..."
+								value={roomId}
+								onChange={(e) => setRoomId(e.target.value)}
+							/>
+							<button
+								className="bg-blue-500 hover:bg-blue-700 px-2 py-2 rounded w-full"
+								onClick={() => joinRoom(roomId, username)}>
+								Unirse a Sala
+							</button>
+						</div>
+
 					</div>
-					<div className="flex flex-col gap-2">
-						<input
-							type="text"
-							className="bg-white px-2 py-1 rounded w-80"
-							placeholder="Ingresa el Id de la Sala..."
-							value={roomId}
-							onChange={(e) => setRoomId(e.target.value)}
-						/>
-						<input
-							type="text"
-							className="bg-white px-2 py-1 rounded w-80"
-							placeholder="Ingresa tu nombre de Usuario..."
-							value={username}
-							onChange={(e) => setUsername(e.target.value)}
-						/>
-					</div>
+
 				</div>
 
 			</div>
