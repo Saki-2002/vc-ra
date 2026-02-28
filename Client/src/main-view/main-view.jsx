@@ -146,7 +146,7 @@ function MainView() {
                                             key={socketId}
                                             stream={stream}
                                             videoEnabled={!!tracks.videoTrack}
-                                            audioEnabled={!!tracks.audioEnabled}
+                                            audioEnabled={!!tracks.audioTrack}
                                             username={username}
                                         />
                                     )

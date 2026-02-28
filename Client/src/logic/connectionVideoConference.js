@@ -25,6 +25,34 @@ let peersMap = new Map()
 let onPeersUpdate = null
 
 //======================
+//  ICE SERVERS (TURN)
+//======================
+
+const iceServers = [
+    { urls: "stun:stun.relay.metered.ca:80" },
+    {
+        urls: "turn:global.relay.metered.ca:80",
+        username: "4a32a8ce099528d1b2c30eb7",
+        credential: "F8HHR7pzKNYsIJU9"
+    },
+    {
+        urls: "turn:global.relay.metered.ca:80?transport=tcp",
+        username: "4a32a8ce099528d1b2c30eb7",
+        credential: "F8HHR7pzKNYsIJU9"
+    },
+    {
+        urls: "turn:global.relay.metered.ca:443",
+        username: "4a32a8ce099528d1b2c30eb7",
+        credential: "F8HHR7pzKNYsIJU9"
+    },
+    {
+        urls: "turns:global.relay.metered.ca:443?transport=tcp",
+        username: "4a32a8ce099528d1b2c30eb7",
+        credential: "F8HHR7pzKNYsIJU9"
+    }
+]
+
+//======================
 //      FUNCIONES
 //======================
 
@@ -202,7 +230,10 @@ const createRecvTransport = async () => {
                 }
                 try {
                     //Create RecvTransport
-                    recvTransport = deviceGlobal.createRecvTransport(res)
+                    recvTransport = deviceGlobal.createRecvTransport({
+                        ...res,
+                        iceServers
+                    })
 
                     recvTransport.on("connect", async ({ dtlsParameters }, callback, errback) => {
                         socket.emit("connectTransport", {
@@ -252,7 +283,10 @@ const createSendTransport = async () => {
                 }
                 try {
                     //Create SendTransport
-                    sendTransport = deviceGlobal.createSendTransport(res)
+                    sendTransport = deviceGlobal.createSendTransport({
+                        ...res,
+                        iceServers
+                    })
 
                     sendTransport.on("connect", async ({ dtlsParameters }, callback, errback) => {
                         socket.emit("connectTransport", {

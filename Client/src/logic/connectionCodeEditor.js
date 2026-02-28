@@ -1,5 +1,5 @@
 import socket from "../logic/socketConnection"
-const BASE_URL = "http://localhost:5000"
+const BASE_URL = "https://bmdt4n7d-5000.brs.devtunnels.ms"
 
 let addOutputRef = null
 let setIsExecuting_coRef = null
