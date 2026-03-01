@@ -1,5 +1,6 @@
 import socket from "../logic/socketConnection"
-const BASE_URL = "https://bmdt4n7d-5000.brs.devtunnels.ms"
+//const BASE_URL = "https://bmdt4n7d-5000.brs.devtunnels.ms"
+const BASE_URL = "https:localhost:5000"
 
 let addOutputRef = null
 let setIsExecuting_coRef = null
@@ -80,7 +81,7 @@ const emitCodeChange = (roomId, value) => {
     socket.emit("codeChange", {roomId, code: value})
 }
 
-const codeChangeListener = (setCode) => {
+const setupCodeChangeListener = (setCode) => {
     setCodeRef = setCode
 
     socket.off("codeChange")
@@ -172,7 +173,7 @@ export {
     setupConsoleListeners,
     sendInput,
     killExecution,
-    codeChangeListener,
+    setupCodeChangeListener,
     emitCodeChange,
     cleanupCodeChangeListener,
     requestCurrentCode,

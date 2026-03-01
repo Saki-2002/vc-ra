@@ -1,20 +1,18 @@
 //======================
 //       IMPORTS
 //======================
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useCallback } from "react"
 import "../App.css"
-import LocalVideo from "./local-video"
-import RemoteVideo from "./remote-video"
-import CodeEditor from "./code-editor"
-import * as mediasoupClient from "mediasoup-client"
-import { useDebugValue } from "react"
+import LocalVideo from "../components/local-video"
+import RemoteVideo from "../components/remote-video"
+import CodeEditor from "../components/code-editor"
 import { useLocation, useParams } from "react-router-dom"
 import LoadingScreen from "./loading-screen"
-import * as handleConnection from "../logic/connectionVideoConference"
-import ConsoleOutput from "./console-output"
-import CommentsPanel from "./comments-panel"
-import HostView from "./host-view"
-
+import ConsoleOutput from "../components/console-output"
+import CommentsPanel from "../components/comments-panel"
+import Reactions from "../components/reactions"
+import useReactions from "../hooks/useReactions"
+import useInitializeRoom from "../hooks/useInitializeRoom"
 
 //======================
 //  FUNCION PRINCIPAL
@@ -28,10 +26,19 @@ function MainView() {
     const { state } = useLocation()
     const username = state?.username
     const isHost = state?.isHost
-    const [cargando, setCargando] = useState(true)
-    const [remoteStreams, setRemoteStreams] = useState(new Map())
-    const [remotePeers, setRemotePeers] = useState(new Map())
 
+    const {
+        cargando,
+        remoteStreams,
+        remotePeers,
+        code,
+        setCode,
+        comments,
+        setComments,
+        isExecuting
+    } = useInitializeRoom(roomId)
+
+    const { floatingEmojis } = useReactions(roomId)
 
     const [commentData, setCommentData] = useState({
         comments: [],
@@ -46,56 +53,22 @@ function MainView() {
         handleReaction: () => { }
     })
 
+
+    //======================
+    //		FUNCIONES
+    //======================
+
+    //(Callback) handleCommentDataChange
+    //Entradas: data
+    //Uso: Establece como variable global los datos de un comentario
+    //Salida: Ninguna
     const handleCommentDataChange = useCallback((data) => {
         setCommentData(data)
     }, [])
 
-    useEffect(() => {
-
-        const initializeRoom = async () => {
-            try {
-
-                handleConnection.setMediaTracksUpdateCallback((updatedTracks) => {
-                    console.log("Actualizando streams remotos:", updatedTracks.size)
-                    setRemoteStreams(new Map(updatedTracks))
-                })
-
-                handleConnection.setPeersUpdateCallback((updatedPeers) => {
-                    setRemotePeers(new Map(updatedPeers))
-                })
-
-                //Se llama a createConsumers
-                await handleConnection.createConsumers()
-                setRemoteStreams(handleConnection.getMediaTracks())
-                setRemotePeers(handleConnection.getPeers())
-                setCargando(false)
-            } catch (err) {
-                console.error("Error al Inicializar Room. Por favor volver a cargar la página")
-            }
-        }
-        initializeRoom()
-
-        return () => {
-            handleConnection.setMediaTracksUpdateCallback(null)
-            handleConnection.setPeersUpdateCallback(null)
-        }
-
-    }, [])
-
-
     //======================
     //  VISTA HTML / CSS
     //======================
-
-    /*
-        Full-Screen GRAY
-            Columnas: 2
-                1C-> w2/3 AMBER Filas: 2
-                    1F-> h4/5 INDIGO
-                    2F-> h1/5 ROSE
-                2C->w1/3 GREEN
-            Absolute (Draggable) LocalVideo
-    */
     return (
         <>
             {cargando ?
@@ -154,6 +127,9 @@ function MainView() {
                             </div>
                         </div>
                     </div>
+
+                    <Reactions items={floatingEmojis} />
+
                     <div className="fixed inset-0 pointer-events-none">
                         <LocalVideo />
                     </div>

@@ -1,11 +1,25 @@
+//======================
+//		IMPORTS
+//======================
+
 import { useEffect } from "react"
 import { useState } from "react"
 
+//======================
+//	FUNCION PRINCIPAL
+//======================
 
 function LoadingScreen () {
 
+    //======================
+    //		CONSTANTES
+    //======================
     const [dots, setDots] = useState("")
-    
+
+
+    //======================
+    //		FUNCIONES
+    //======================
     useEffect(() => {
         const interval = setInterval(() => {
             setDots(prev => (prev.length < 3 ? prev + "." : ""))
@@ -14,6 +28,10 @@ function LoadingScreen () {
         return () => clearInterval(interval)
     }, [])
 
+
+    //======================
+    //	VISTA HTML / CSS
+    //======================
     return (
         <div className="bg-gray-900 flex w-full min-h-screen justify-center items-center z-50">
             <h1 className="text-white font-bold z-50 text-6xl">

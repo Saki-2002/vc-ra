@@ -1,8 +1,6 @@
-import { useState } from 'react'
-import { useEffect } from 'react'
 import './index.css'
-import Main_View from "./main-view/main-view.jsx"
-import Starting_View from './main-view/starting-view.jsx'
+import Main_View from "./views/main-view.jsx"
+import Starting_View from './views/starting-menu.jsx'
 import {BrowserRouter as Router, Routes, Route} from "react-router-dom"
 import { Navigate } from 'react-router-dom'
 

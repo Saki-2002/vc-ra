@@ -1,7 +1,7 @@
 //======================
 //       IMPORTS
 //======================
-import { useRef, useState } from "react"
+import { useState } from "react"
 import * as handleConnection from "../logic/connectionVideoConference"
 import { useNavigate } from "react-router-dom"
 
@@ -72,15 +72,6 @@ function Starting_View() {
 	//	Vista HTML / CSS
 	//======================
 
-	/*
-		Full-Screen RED
-			Filas: 3
-				1F-> Columnas: 2
-					1C -> Botón Crear Sala GREEN
-					2C -> Botón Unirse Sala BLUE
-				2F-> Input "Ingresa el Id de Sala..."
-				3F-> Input "Ingresa tu nombre de Usuario..."
-	*/
 	return (
 		<>
 			<div className="bg-slate-700 w-screen h-screen flex items-center justify-center">
