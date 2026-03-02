@@ -28,7 +28,7 @@ function RemoteVideo({ stream, videoEnabled, audioEnabled, username }) {
 
     return (
 
-        <div className="w-40 bg-opacity-30 bg-gray-300 rounded-xl">
+        <div className="w-[calc(50%-0.25rem)] bg-opacity-30 bg-gray-300 rounded-xl">
             <div className="m-3 h-40 bg-gray-700 relative rounded-lg overflow-hidden">
                 {videoEnabled ? (
                     <video

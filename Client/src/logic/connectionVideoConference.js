@@ -89,7 +89,7 @@ const joinRoom = async (roomId, username, isHost) => {
 
                 setupNewProducerListener()
 
-                resolve({ success: true })
+                resolve({ success: true , peers: res.peers})
             } catch (err) {
                 console.error("Error al cargar el device", err)
                 reject(err)

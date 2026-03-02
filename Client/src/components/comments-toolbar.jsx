@@ -29,7 +29,7 @@ function CommentsToolbar({ setShowCommentInput, selection, setSelectedTag, handl
                         key={btn.tag}
                         className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition-colors ${btn.color} ${btn.hoverColor}`}
                         title={btn.title}
-                        onClick={() => 
+                        onClick={() =>
                             handleButtonClick(btn.tag)
                         }
                     >

@@ -2,9 +2,6 @@
 //       IMPORTS
 //======================
 import * as mediasoup from "mediasoup"
-import { log, logErr, logEnd, logObj, logFunc, logList, logInConsole, indent, unindent, logMap } from "./logging.js"
-
-logInConsole(false)
 
 //======================
 // CONSTANTES NECESARIAS
@@ -83,23 +80,15 @@ const findProducerOwner = (producerId) => {
 //Salida: Router
 const createRoom = async (roomId, socketId) => {
 
-    logFunc("createRoom")
-
     try {
-        log("Crear new Router")
         const newRouter = await workerGlobal.createRouter({ mediaCodecs })
-        log("newRouter creado")
         rooms.set(roomId, {
             router: newRouter,
             peers: [socketId]
         })
-        log("rooms.set")
-        logMap(roomId, rooms.get(roomId))
         console.log("Room creado con exito. Id: ", roomId)
-        logEnd("Room creado con exito")
         return newRouter
     } catch (err) {
-        logErr("Error al crear el Router")
         console.error("Error al crear el Router", err)
     }
 }
@@ -110,7 +99,6 @@ const createRoom = async (roomId, socketId) => {
 //Salida: Router or Router(createRoom)
 const findOrCreateRoom = async (roomId, socketId) => {
 
-    logFunc("findOrCreateRoom")
     if (!rooms.get(roomId)) {
         const router = await createRoom(roomId, socketId)
         return router
@@ -127,27 +115,21 @@ const findOrCreateRoom = async (roomId, socketId) => {
 // transport.dtlsParameters
 const createWebRtcTransport = async (roomId, socketId, direction) => {
 
-    logFunc("createWebRtcTransport")
-    log("get Router")
     const router = rooms.get(roomId)?.router
-    logObj(router)
     if (!router) throw new Error(`No se encontró router para la sala ${roomId}`);
-    log("Crear Transport")
     const transport = await router.createWebRtcTransport({
         listenIps: [{
             ip: "0.0.0.0",
-            announcedIp: process.env.PUBLIC_IP || "201.188.183.15"
+            announcedIp:"127.0.0.1"
+            //announcedIp: process.env.PUBLIC_IP || "201.188.183.15"
         }],
         enableUdp: true,
         enableTcp: true,
         preferUdp: true
     })
-    log("Transport creado")
     transports.set(transport.id, { transport, direction })
-    logMap(transport.id, transports.get(transport.id))
     const peer = peers.get(socketId)
     peer.transports.push(transport)
-    logEnd(`WebRtcTransport creado. Id: ${transport.id}. Dir: ${direction}`)
     console.log(`WebRtcTransport creado. Id: ${transport.id}. Dir: ${direction}`)
 
     return {

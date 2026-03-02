@@ -101,8 +101,8 @@ function MainView() {
                                 selection={selection}
                             />
                         </div>
-                        <div className="bg-teal-900 w-2/5 rounded-2xl p-4">
-                            <div className="flex flex-wrap gap-2 h-1/6">
+                        <div className="bg-teal-900 w-2/5 rounded-2xl p-4 overflow-y-auto">
+                            <div className="flex flex-wrap gap-2 h-1/6 ">
                                 {Array.from(remotePeers.entries()).map(([socketId, peerInfo]) => {
                                     //Crear MediaStream por cada peer
                                     const tracks = remoteStreams.get(socketId) || {}
@@ -115,13 +115,6 @@ function MainView() {
                                     }
 
                                     const username = peerInfo?.username || `Peer-${String(socketId).slice(0, 6)}`
-                                    if(!stream) return null
-
-                                    console.log(`KEY: `, socketId)
-                                    console.log(`STREAM: `, stream)
-                                    console.log(`VIDEOENABLED: `, !!tracks.videoTrack)
-                                    console.log(`AUDIOENABLED: `, !!tracks.audioTrack)
-                                    console.log(`USERNAME: `, username)
 
                                     return (
                                         <RemoteVideo
