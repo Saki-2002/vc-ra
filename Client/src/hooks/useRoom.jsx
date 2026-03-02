@@ -10,7 +10,7 @@ export default function useRoom(roomId) {
     const [remotePeers, setRemotePeers] = useState(new Map())
     const [code, setCode] = useState("")
     const [comments, setComments] = useState([])
-    
+
     const [commentData, setCommentData] = useState({
         comments: [],
         selection: null,
@@ -25,36 +25,25 @@ export default function useRoom(roomId) {
     })
 
 
-    const initializeRoom = () => {
-        //(async) initializeVideoConference
-        //Entradas: Ninguna
-        //Uso: Inicializa la sala actualizando los streams remotos y preparando los streams locales
-        //Salida: Ninguna
-        const initializeVideoConference = async () => {
-            try {
-                //Actualiza los streams remotos
-                videoConferenceConnection.setMediaTracksUpdateCallback((updatedTracks) => {
-                    console.log("Actualizando streams remotos:", updatedTracks.size)
-                    setRemoteStreams(new Map(updatedTracks))
-                })
+    const initializeRoom = async () => {
+        try {
+            //Actualiza los streams remotos
+            videoConferenceConnection.setMediaTracksUpdateCallback((updatedTracks) => {
+                console.log("Actualizando streams remotos:", updatedTracks.size)
+                setRemoteStreams(new Map(updatedTracks))
+            })
 
-                //Actualiza la lista de peers
-                videoConferenceConnection.setPeersUpdateCallback((updatedPeers) => {
-                    setRemotePeers(new Map(updatedPeers))
-                })
+            //Actualiza la lista de peers
+            videoConferenceConnection.setPeersUpdateCallback((updatedPeers) => {
+                setRemotePeers(new Map(updatedPeers))
+            })
 
-                //Se llama a createConsumers
-                await videoConferenceConnection.createConsumers()
-                setRemoteStreams(videoConferenceConnection.getMediaTracks())
-                setRemotePeers(videoConferenceConnection.getPeers())
-                setCargando(false)
-            } catch (err) {
-                console.error("Error al Inicializar Room. Por favor volver a cargar la página")
-            }
-        }
+            //Se llama a createConsumers
+            await videoConferenceConnection.createConsumers()
+            setRemoteStreams(videoConferenceConnection.getMediaTracks())
+            setRemotePeers(videoConferenceConnection.getPeers())
 
-        //Se pide el código y listado de comentarios actuales de la sala
-        const requestCodeAndComments = () => {
+            //Se pide el código y listado de comentarios actuales de la sala
             codeEditorConnection.requestCurrentCode(roomId, (currentCode) => {
                 setCode(currentCode || "")
             })
@@ -62,10 +51,12 @@ export default function useRoom(roomId) {
             codeEditorConnection.requestCurrentComments(roomId, (currentComments) => {
                 setComments(currentComments || [])
             })
-        }
 
-        initializeVideoConference()
-        requestCodeAndComments()
+            setCargando(false)
+        } catch (err) {
+            console.error("Error al inicializar Room.", err)
+            setCargando(false)
+        }
     }
 
     //Inicializar videoconferencia y obtener código y comentarios
@@ -79,12 +70,6 @@ export default function useRoom(roomId) {
 
     }, [roomId])
 
-    const handleCommentDataChange = useCallback((data) => {
-        setCommentData(data)
-    }, [])
-
-
-
     return {
         cargando,
         remoteStreams,
@@ -92,10 +77,6 @@ export default function useRoom(roomId) {
         code,
         setCode,
         comments,
-        setComments,
-        handleCommentDataChange,
-        commentData
+        setComments
     }
-
 }
-

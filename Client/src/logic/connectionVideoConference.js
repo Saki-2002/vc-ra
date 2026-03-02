@@ -179,12 +179,14 @@ const setupNewProducerListener = () => {
         console.log(`Producer pausado: ${kind} de ${socketId}`)
 
         // Buscar el consumer correspondiente y marcarlo como pausado
+        /*
         consumers.forEach((consumer) => {
             if (consumer.producerId === producerId) {
                 consumer.appData.producerPaused = true
                 console.log(`Consumer ${consumer.id} marcado como pausado`)
             }
         })
+        */
 
         saveMediaFromConsumers()
         if (onMediaTracksUpdate) onMediaTracksUpdate(new Map(mediaTracks))
@@ -194,12 +196,14 @@ const setupNewProducerListener = () => {
         console.log(`Producer reanudado: ${kind} de ${socketId}`)
 
         // Buscar el consumer correspondiente y desmarcarlo
+        /*
         consumers.forEach((consumer) => {
             if (consumer.producerId === producerId) {
                 consumer.appData.producerPaused = false
                 console.log(`Consumer ${consumer.id} marcado como activo`)
             }
         })
+            */
 
         saveMediaFromConsumers()
         if (onMediaTracksUpdate) onMediaTracksUpdate(new Map(mediaTracks))
@@ -385,7 +389,7 @@ const saveMediaFromConsumers = () => {
         const socketId = c.appData?.socketId
         if (!socketId) return;
 
-        const producerPaused = c.appData?.producerPaused === true || c.producerPaused === true
+        const producerPaused = c.producerPaused === true || c.producerPaused === true
 
         if (!mediaTracks.has(socketId)) {
             mediaTracks.set(socketId, {
@@ -571,12 +575,12 @@ const toggleVideo = async () => {
 
 const isRoomAvailable = async (roomCode) => {
     return await new Promise((resolve) => {
-        socket.emit("isRoomAvailable", roomCode, ({available, error}) => {
+        socket.emit("isRoomAvailable", roomCode, ({ available, error }) => {
             if (error) return resolve(false);
             resolve(available)
-        })        
+        })
     })
-} 
+}
 
 
 export {

@@ -58,7 +58,7 @@ function MainView() {
     const {
         floatingEmojis,
         handleReaction
-     } = useReactions(roomId)
+    } = useReactions(roomId)
 
     //======================
     //  VISTA HTML / CSS
@@ -91,14 +91,11 @@ function MainView() {
                                 roomId={roomId}
                                 username={username}
                                 comments={comments}
-                                commentText={commentData.commentText}
                                 selectedTag={selectedTag}
                                 setSelectedTag={setSelectedTag}
-                                setCommentText={commentData.setCommentText}
                                 handleAddComment={handleAddComment}
                                 handleDeleteComment={handleDeleteComment}
                                 handleReaction={handleReaction}
-                                focusOnComment={commentData.focusOnComment}
                                 isHost={isHost}
                                 editorRef={editorRef}
                                 selection={selection}
@@ -109,11 +106,23 @@ function MainView() {
                                 {Array.from(remotePeers.entries()).map(([socketId, peerInfo]) => {
                                     //Crear MediaStream por cada peer
                                     const tracks = remoteStreams.get(socketId) || {}
-                                    const stream = new MediaStream()
-                                    if (tracks.audioTrack) stream.addTrack(tracks.audioTrack);
-                                    if (tracks.videoTrack) stream.addTrack(tracks.videoTrack);
+                                    let stream = null
+                                    if (tracks.audioTrack || tracks.videoTrack) {
+                                        stream = new MediaStream()
+                                        if (tracks.audioTrack) stream.addTrack(tracks.audioTrack);
+                                        if (tracks.videoTrack) stream.addTrack(tracks.videoTrack);
+
+                                    }
 
                                     const username = peerInfo?.username || `Peer-${String(socketId).slice(0, 6)}`
+                                    if(!stream) return null
+
+                                    console.log(`KEY: `, socketId)
+                                    console.log(`STREAM: `, stream)
+                                    console.log(`VIDEOENABLED: `, !!tracks.videoTrack)
+                                    console.log(`AUDIOENABLED: `, !!tracks.audioTrack)
+                                    console.log(`USERNAME: `, username)
+
                                     return (
                                         <RemoteVideo
                                             key={socketId}
