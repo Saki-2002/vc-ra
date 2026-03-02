@@ -6,10 +6,12 @@ import expressions from "../auxiliar/expressions"
 export const addCommentMark = StateEffect.define()
 //Efecto de borrar destacado al editor
 export const removeCommentMark = StateEffect.define()
+//Efecto de limpiar todos los destacados
+export const clearAllCommentMarks = StateEffect.define()
 
 const getHighlightClass = (tag) => {
     if (tag === "temp-highlight") return "comment-highlight-temp-highlight";
-    return expressions[tag].highlightClass || "comment-highlight"
+    return expressions[tag]?.highlightClass || "comment-highlight"
 }
 
 //Almacena las decoraciones
@@ -23,7 +25,9 @@ export const commentField = StateField.define({
         decorations = decorations.map(tr.changes)
 
         for (let effect of tr.effects) {
-            if (effect.is(addCommentMark)) {
+            if (effect.is(clearAllCommentMarks)) {
+                decorations = Decoration.none
+            } else if (effect.is(addCommentMark)) {
                 decorations = decorations.update({
                     add: [Decoration.mark({
                         class: getHighlightClass(effect.value.tag),

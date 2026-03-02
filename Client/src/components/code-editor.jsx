@@ -1,39 +1,40 @@
 //======================
 //		IMPORTS
 //======================
+import { useRef, useState } from "react"
 import CodeMirror from "@uiw/react-codemirror"
 import { python } from "@codemirror/lang-python"
-import { useEffect, useRef, useState, useCallback } from "react"
-import * as handleConnection from "../logic/connectionCodeEditor"
-import { EditorView, Decoration } from "@codemirror/view"
-import { StateField, StateEffect } from "@codemirror/state"
+import { EditorView } from "@codemirror/view"
 import { EditorState } from "@codemirror/state"
-import expressions from "../auxiliar/expressions"
-import CommentPopUp from "./comment-popup"
-import CommentBox from "./comment-box"
-import reactions from "./reactions"
 import EditorToolbar from "./editor-toolbar"
-import { commentField, addCommentMark, removeCommentMark } from "./code-decorations"
+import { commentField } from "./code-decorations"
 import useCodeEditor from "../hooks/useCodeEditor"
+import useComments from "../hooks/useComments"
+import useCodeDecorations from "../hooks/useCodeDecorations"
 
 //======================
 //  FUNCION PRINCIPAL
 //======================
-function CodeEditor({ roomId, isHost, username, onCommentDataChange }) {
+function CodeEditor({ roomId, isHost, username, code, setCode, editorRef, onCommentDataChange, setSelection}) {
 
     const {
-        code,
-        isExecuting,
-        editorRef,
         handleChange,
         handleSelectionChange,
-        executeCode
-    } = useCodeEditor({roomId, isHost, username, onCommentDataChange})
+        executeCode,
+        isExecuting
+    } = useCodeEditor({
+        roomId,
+        isHost,
+        code,
+        setCode,
+        setSelection
+    })
+
 
     return (
         <div className="flex flex-col h-full relative overflow-hidden min-h-0 rounded-2xl">
             <div className="flex flex-1 flex-col overflow-hidden">
-                <EditorToolbar isExecuting={isExecuting} onExecute={executeCode}/>
+                <EditorToolbar isExecuting={isExecuting} onExecute={executeCode} />
                 <CodeMirror
                     className="h-full text-[16px] overflow-y-auto"
                     ref={editorRef}

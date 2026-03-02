@@ -1,7 +1,7 @@
 //======================
 //       IMPORTS
 //======================
-import { useState, useCallback } from "react"
+import { useRef } from "react"
 import "../App.css"
 import LocalVideo from "../components/local-video"
 import RemoteVideo from "../components/remote-video"
@@ -12,7 +12,8 @@ import ConsoleOutput from "../components/console-output"
 import CommentsPanel from "../components/comments-panel"
 import Reactions from "../components/reactions"
 import useReactions from "../hooks/useReactions"
-import useInitializeRoom from "../hooks/useInitializeRoom"
+import useRoom from "../hooks/useRoom"
+import useComments from "../hooks/useComments"
 
 //======================
 //  FUNCION PRINCIPAL
@@ -27,6 +28,8 @@ function MainView() {
     const username = state?.username
     const isHost = state?.isHost
 
+    const editorRef = useRef(null)
+
     const {
         cargando,
         remoteStreams,
@@ -35,36 +38,27 @@ function MainView() {
         setCode,
         comments,
         setComments,
-        isExecuting
-    } = useInitializeRoom(roomId)
+        handleCommentDataChange,
+        commentData
+    } = useRoom(roomId)
 
-    const { floatingEmojis } = useReactions(roomId)
-
-    const [commentData, setCommentData] = useState({
-        comments: [],
-        selection: null,
-        showCommentInput: false,
-        commentText: "",
-        selectedTag: null,
-        setShowCommentInput: () => { },
-        setCommentText: () => { },
-        handleAddComment: () => { },
-        handleDeleteComment: () => { },
-        handleReaction: () => { }
+    const {
+        selection,
+        setSelection,
+        selectedTag,
+        setSelectedTag,
+        handleAddComment,
+        handleDeleteComment
+    } = useComments({
+        roomId,
+        username,
+        comments,
+        setComments
     })
-
-
-    //======================
-    //		FUNCIONES
-    //======================
-
-    //(Callback) handleCommentDataChange
-    //Entradas: data
-    //Uso: Establece como variable global los datos de un comentario
-    //Salida: Ninguna
-    const handleCommentDataChange = useCallback((data) => {
-        setCommentData(data)
-    }, [])
+    const {
+        floatingEmojis,
+        handleReaction
+     } = useReactions(roomId)
 
     //======================
     //  VISTA HTML / CSS
@@ -81,7 +75,11 @@ function MainView() {
                                     roomId={roomId}
                                     isHost={isHost}
                                     username={username}
+                                    code={code}
+                                    setCode={setCode}
                                     onCommentDataChange={handleCommentDataChange}
+                                    editorRef={editorRef}
+                                    setSelection={setSelection}
                                 />
                             </div>
                             <div className="h-1/3 min-h-[50px]">
@@ -90,18 +88,20 @@ function MainView() {
                         </div>
                         <div className="bg-teal-900 md:w-2/5 rounded-2xl p-4 w-full overflow-y-auto">
                             <CommentsPanel
-                                comments={commentData.comments}
-                                selection={commentData.selection}
-                                showCommentInput={commentData.showCommentInput}
+                                roomId={roomId}
+                                username={username}
+                                comments={comments}
                                 commentText={commentData.commentText}
-                                selectedTag={commentData.selectedTag}
-                                setShowCommentInput={commentData.setShowCommentInput}
+                                selectedTag={selectedTag}
+                                setSelectedTag={setSelectedTag}
                                 setCommentText={commentData.setCommentText}
-                                handleAddComment={commentData.handleAddComment}
-                                handleDeleteComment={commentData.handleDeleteComment}
-                                handleReaction={commentData.handleReaction}
+                                handleAddComment={handleAddComment}
+                                handleDeleteComment={handleDeleteComment}
+                                handleReaction={handleReaction}
                                 focusOnComment={commentData.focusOnComment}
                                 isHost={isHost}
+                                editorRef={editorRef}
+                                selection={selection}
                             />
                         </div>
                         <div className="bg-teal-900 w-2/5 rounded-2xl p-4">

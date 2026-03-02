@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as codeEditorConnection from "../logic/connectionCodeEditor"
 
-export default function useComments({ roomId, username, onCommentDataChange }) {
+export default function useComments({ roomId, username, onCommentDataChange, comments, setComments }) {
 
-    const [comments, setComments] = useState([])
     const [selection, setSelection] = useState(null)
     const [showCommentInput, setShowCommentInput] = useState(false)
     const [selectedTag, setSelectedTag] = useState(null)
-
     const selectionRef = useRef(null)
     const showCommentInputRef = useRef(false)
     const selectedTagRef = useRef(null)
@@ -43,29 +41,21 @@ export default function useComments({ roomId, username, onCommentDataChange }) {
     }, [])
 
 
-    const handleAddComment = useCallback((tag = null, commentText = "", handleReaction) => {
+    const handleAddComment = useCallback((tag = null, commentText = "") => {
         const currentSelection = selectionRef.current
-        const currentShowCommentInput = showCommentInputRef.current
         const currentSelectedTag = selectedTagRef.current
 
         if (!currentSelection) {
-            if (handleReaction) handleReaction(tag)
             return
         }
 
-        if (tag && !currentShowCommentInput) {
-            setSelectedTag(tag)
-            setShowCommentInput(true)
-            return
-        }
-
-        const effectiveTag = currentSelectedTag || tag || null
+        const effectiveTag = currentSelectedTag.current || tag || null
         const finalText = commentText.trim() || ""
 
         const newComment = {
             id: `comment-${Date.now()}`,
             text: finalText,
-            username: username,
+            username,
             timestamp: Date.now(),
             tag: effectiveTag,
             from: currentSelection.from,
@@ -76,9 +66,7 @@ export default function useComments({ roomId, username, onCommentDataChange }) {
         codeEditorConnection.emitAddComment(roomId, newComment)
 
         setSelectedTag(null)
-        setShowCommentInput(false)
         setSelection(null)
-        lastSelectionRef.current = { from: null, to: null }
 
     }, [username, roomId])
 
@@ -86,37 +74,14 @@ export default function useComments({ roomId, username, onCommentDataChange }) {
     const handleDeleteComment = useCallback((commentId) => {
         codeEditorConnection.emitDeleteComment(roomId, commentId)
     }, [roomId])
-
-
-    useEffect(() => {
-        if (onCommentDataChange) {
-            onCommentDataChange({
-                comments,
-                selection,
-                showCommentInput,
-                selectedTag,
-                setShowCommentInput,
-                handleAddComment,
-                handleDeleteComment,
-                focusOnComment
-            })
-        }
-    }, [
-        comments,
-        selection,
-        showCommentInput,
-        selectedTag,
-        onCommentDataChange,
-    ])
-
     
     return {
-        comments,
-        selection,
-        showCommentInput,
-        selectedTag,
         handleAddComment,
-        handleDeleteComment
+        handleDeleteComment,
+        setSelection,
+        selection,
+        setSelectedTag,
+        selectedTag
     }
 
 }

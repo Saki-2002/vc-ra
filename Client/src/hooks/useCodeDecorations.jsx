@@ -1,14 +1,17 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { EditorView } from "@codemirror/view";
-import { addCommentMark, removeCommentMark } from "../components/code-decorations";
+import { addCommentMark, removeCommentMark, clearAllCommentMarks } from "../components/code-decorations";
 
 export default function useCodeDecorations({ editorRef, comments }) {
 
     const [tempHighlightId, setTempHighlightId] = useState(null)
+    const tempHighlightTimerRef = useRef(null)
 
     useEffect(() => {
         const view = editorRef.current?.view
         if (!view) return
+
+        view.dispatch({effects:clearAllCommentMarks.of(null)})
 
         comments.forEach(comment => {
             if (comment.from !== undefined && comment.to !== undefined) {
@@ -22,39 +25,60 @@ export default function useCodeDecorations({ editorRef, comments }) {
                 })
             }
         })
-    }, [comments])
+    }, [comments, editorRef])
 
-     useEffect(() => {
+    useEffect(() => {
         if (!tempHighlightId) return;
         const view = editorRef.current?.view
         if (!view) return;
         const comment = comments.find(c => c.id === tempHighlightId)
         if (!comment) return;
 
+        const tempId = `temp-${tempHighlightId}`
+
         view.dispatch({
             effects: addCommentMark.of({
-                id: `temp-${tempHighlightId}`,
+                id: tempId,
                 from: comment.from,
                 to: comment.to,
                 tag: "temp-highlight"
             })
         })
 
-        const timer = setTimeout(() => {
+        if (tempHighlightTimerRef.current) {
+            clearTimeout(tempHighlightTimerRef.current)
+        }
+
+
+        tempHighlightTimerRef.current = setTimeout(() => {
             view.dispatch({
-                effects: removeCommentMark.of(`temp-${tempHighlightId}`)
+                effects: removeCommentMark.of(tempId)
             })
             setTempHighlightId(null)
+            tempHighlightTimerRef.current = null
         }, 2000)
 
-        return () => clearTimeout(timer)
-    }, [tempHighlightId])
+        return () => {
+            if (tempHighlightTimerRef.current) {
+                clearTimeout(tempHighlightTimerRef.current)
+            }
+            view.dispatch({effects: removeCommentMark.of(tempId)})
+        }
+    }, [tempHighlightId, comments, editorRef])
 
+    const removeCommentHighlight = useCallback((commentId) => {
+        const view = editorRef?.current?.view
+        if(!view) return;
+        
+        view.dispatch({
+            effects: removeCommentMark.of(commentId)
+        })
+    }, [editorRef])
 
 
     const focusOnComment = useCallback((commentId) => {
         const comment = comments.find(c => c.id === commentId)
-        if (!comment) return;
+        if (!comment || comment.from === undefined || comment.to === undefined) return;
 
         const view = editorRef.current?.view
         if (!view) return;
@@ -73,10 +97,8 @@ export default function useCodeDecorations({ editorRef, comments }) {
         view.focus()
 
         setTempHighlightId(commentId)
-    }, [comments])
+    }, [comments, editorRef])
 
-    return (
-        focusOnComment
-    )
+    return { focusOnComment, removeCommentHighlight}
 
 }

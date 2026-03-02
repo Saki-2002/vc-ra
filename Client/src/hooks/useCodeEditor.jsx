@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as codeEditorConnection from "../logic/connectionCodeEditor"
 
-export default function useCodeEditor({ roomId, isHost, code, setCode, isExecuting }) {
+export default function useCodeEditor({ roomId, isHost, code, setCode, setSelection, selection}) {
 
     const isRemoteChange = useRef(false)
-    const editorRef = useRef(null)
+    const lastSelectionRef = useRef({from: null, to:null})
+    const [isExecuting, setIsExecuting] = useState(false)
 
     // Setear una sola vez los Listeners 
     useEffect(() => {
@@ -20,7 +21,7 @@ export default function useCodeEditor({ roomId, isHost, code, setCode, isExecuti
         return () => {
             codeEditorConnection.cleanupCodeChangeListener()
         }
-    }, [])
+    }, [setCode])
 
     const handleChange = useCallback((value) => {
 
@@ -36,42 +37,44 @@ export default function useCodeEditor({ roomId, isHost, code, setCode, isExecuti
     }, [isHost, roomId, setCode])
 
     const handleSelectionChange = useCallback((viewUpdate) => {
-
-        if (!viewUpdate.selectionSet) return;
+        if (!viewUpdate.selectionSet || !setSelection) return;
 
         const { state } = viewUpdate
         const { from, to } = state.selection.main
         const lastSel = lastSelectionRef.current
 
-        if (from === to) {
-            if (lastSel.from !== null || lastSel.to !== null) {
-                lastSelectionRef.current = { from: null, to: null }
+        if(from === to) {
+            if(lastSel.from !== null || lastSel.to !== null) {
+                lastSelectionRef.current = {from: null, to: null}
                 setSelection(null)
             }
             return
         }
+
         if (lastSel.from === from && lastSel.to === to) {
             return
         }
 
-        lastSelectionRef.current = { from, to }
+        lastSelectionRef.current = {from, to}
+        
         setSelection({
             from,
             to,
             text: state.sliceDoc(from, to)
         })
-    }, [])
+        
+    }, [setSelection])
 
-    const executeCode = async () => {
+    const executeCode = useCallback(async () => {
         if (isExecuting || !code.trim()) return
         await codeEditorConnection.runCode(code)
-    }
+    },[isExecuting, code])
 
 
     return {
-        editorRef,
         handleChange,
         handleSelectionChange,
-        executeCode
+        executeCode,
+        isExecuting
     }
 }

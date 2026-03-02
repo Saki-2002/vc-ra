@@ -12,6 +12,7 @@ export default function useReactions(roomId) {
     //showFloatingEmoji
     //Muestra el Emoji Flotante
     const showFloatingEmoji = useCallback((reaction) => {
+        console.log(expressions[reaction.tag]?.emoji)
         const emoji = expressions[reaction.tag]?.emoji || "💬"
         const id = Date.now() + Math.random()
         const newEmoji = {
