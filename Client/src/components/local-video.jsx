@@ -1,91 +1,22 @@
-import { useEffect, useRef, useState } from "react"
 import Draggable from "react-draggable"
-import * as handleConnection from "../logic/connectionVideoConference"
+import useLocalVideo from "../hooks/useLocalVideo"
+import { useEffect, useRef } from "react"
 
+function LocalVideo() {
 
-function LocalVideo(ref) {
   const nodeRef = useRef(null)
-  const [isAudioOn, setIsAudioOn] = useState(false)
-  const [isVideoOn, setIsVideoOn] = useState(false)
-  const [isProducing, setIsProducing] = useState(false)
-  const [localStream, setLocalStream] = useState(null)
   const videoRef = useRef(null)
 
-  const produceFirstTime = async () => {
-    try {
+  const {
+    localStream,
+    isAudioOn,
+    isVideoOn,
+    toggleAudio,
+    toggleVideo
+  } = useLocalVideo()
 
-      const { audioTrack, videoTrack } = await handleConnection.produce()
-
-      const stream = new MediaStream()
-      
-      if(audioTrack) stream.addTrack(audioTrack);
-      if(videoTrack) stream.addTrack(videoTrack);
-
-      setLocalStream(stream)
-      setIsAudioOn(true)
-      setIsVideoOn(true)
-
-      setIsProducing(true)
-
-    } catch (err) {
-      console.error("Error en produceFirstTime. ", err)
-      setIsProducing(false)
-    }
-
-
-  }
-
-
-  const toggleAudio = async () => {
-    if (!isProducing) {
-       await produceFirstTime()
-       return
-    }
-
-    try {
-      const result = await handleConnection.toggleAudio()
-      if(result.success){
-        setIsAudioOn(result.state)
-
-        if(localStream){
-          const audioTrack = localStream.getAudioTracks()[0]
-          if(audioTrack){
-            audioTrack.enabled = result.state
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Error al toggle audio. ", err)
-    }
-  }
-
-  const toggleVideo = async () => {
-    if (!isProducing) {
-      await produceFirstTime()
-      return
-    }
-
-     try {
-      const result = await handleConnection.toggleVideo()
-      if(result.success){
-        setIsVideoOn(result.state)
-
-        if(localStream){
-          const videoTrack = localStream.getVideoTracks()[0]
-          if(videoTrack){
-            videoTrack.enabled = result.state
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Error al toggle video. ", err)
-    }
-
-  }
-
-  useEffect(()=> {
-
-    if(videoRef.current && localStream){
+  useEffect(() => {
+    if (videoRef.current && localStream) {
       videoRef.current.srcObject = localStream
     }
   }, [localStream])
@@ -106,7 +37,7 @@ function LocalVideo(ref) {
               playsInline
               muted
               className="absolute inset-0 w-full h-full bg-black"
-              style={{display:isVideoOn ? "block" : "none"}}
+              style={{ display: isVideoOn ? "block" : "none" }}
             />
             {!isVideoOn && (
               <div className=" font-semibold absolute inset-0 flex items-center justify-center bg-gray-800 text-white">
@@ -115,10 +46,9 @@ function LocalVideo(ref) {
             )}
             <div className="z-10  m-1 h-12 flex gap-4 items-center justify-center">
               <button
-                className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition-colors ${
-                isAudioOn
-                  ? `bg-green-500 hover:bg-green-600`
-                  : `bg-red-500 hover:bg-red-600`
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition-colors ${isAudioOn
+                    ? `bg-green-500 hover:bg-green-600`
+                    : `bg-red-500 hover:bg-red-600`
                   }`}
                 onClick={toggleAudio}
                 title={isAudioOn ? "Silenciar" : "Activar audio"}
@@ -126,10 +56,9 @@ function LocalVideo(ref) {
                 🎤
               </button>
               <button
-                className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition-colors ${
-                isVideoOn
-                  ? `bg-green-500 hover:bg-green-600`
-                  : `bg-red-500 hover:bg-red-600`
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition-colors ${isVideoOn
+                    ? `bg-green-500 hover:bg-green-600`
+                    : `bg-red-500 hover:bg-red-600`
                   }`}
                 onClick={toggleVideo}
                 title={isVideoOn ? "Apagar cámara" : "Activar cámara"}

@@ -24,6 +24,9 @@ let onMediaTracksUpdate = null
 let peersMap = new Map()
 let onPeersUpdate = null
 
+let localMediaStream = null
+let producePromise = null
+
 //======================
 //  ICE SERVERS (TURN)
 //======================
@@ -89,13 +92,36 @@ const joinRoom = async (roomId, username, isHost) => {
 
                 setupNewProducerListener()
 
-                resolve({ success: true , peers: res.peers})
+                resolve({ success: true, peers: res.peers })
             } catch (err) {
                 console.error("Error al cargar el device", err)
                 reject(err)
             }
         })
     })
+}
+
+const getLocalMediaStream = async () => {
+    if (localMediaStream && localMediaStream.active) return localMediaStream
+
+    try {
+        localMediaStream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: {
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            }
+        })
+        return localMediaStream
+    } catch (err) {
+        console.warn("Fallo getUserMedia ideal, reintentando simple...", err)
+    }
+
+    localMediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: true
+    })
+    return localMediaStream
 }
 
 const setPeersUpdateCallback = (callback) => {
@@ -179,14 +205,14 @@ const setupNewProducerListener = () => {
         console.log(`Producer pausado: ${kind} de ${socketId}`)
 
         // Buscar el consumer correspondiente y marcarlo como pausado
-        /*
+
         consumers.forEach((consumer) => {
             if (consumer.producerId === producerId) {
-                consumer.appData.producerPaused = true
+                consumer.producerPaused = true
                 console.log(`Consumer ${consumer.id} marcado como pausado`)
             }
         })
-        */
+
 
         saveMediaFromConsumers()
         if (onMediaTracksUpdate) onMediaTracksUpdate(new Map(mediaTracks))
@@ -196,14 +222,14 @@ const setupNewProducerListener = () => {
         console.log(`Producer reanudado: ${kind} de ${socketId}`)
 
         // Buscar el consumer correspondiente y desmarcarlo
-        /*
+
         consumers.forEach((consumer) => {
             if (consumer.producerId === producerId) {
-                consumer.appData.producerPaused = false
+                consumer.producerPaused = false
                 console.log(`Consumer ${consumer.id} marcado como activo`)
             }
         })
-            */
+
 
         saveMediaFromConsumers()
         if (onMediaTracksUpdate) onMediaTracksUpdate(new Map(mediaTracks))
@@ -370,6 +396,14 @@ const consumeTrack = async (pId) => {
                     rtpParameters: consumerInfo.rtpParameters,
                     appData: { socketId: socketId }
                 })
+
+                consumer.producerPaused = false
+                if (consumer.paused) {
+                    await consumer.resume().catch(() => { })
+                }
+
+                socket.emit("resumeConsumer", { consumerId: consumer.id }, () => {})
+
                 console.log("After await recvTransportConsume")
                 consumers.set(consumer.id, consumer)
                 console.log(`Consumer de tipo ${consumer.kind} creado para producer ${pId}`)
@@ -399,6 +433,10 @@ const saveMediaFromConsumers = () => {
         }
 
         const media = mediaTracks.get(socketId)
+
+        if (c.track && c.track.readyState === "live") {
+            c.track.enabled = true
+        }
 
         if (c.kind === "video") {
             media.videoTrack = producerPaused ? null : c.track
@@ -434,6 +472,14 @@ const produceByKind = async (track, kind) => {
     try {
 
         if (!track) throw new Error(`No existe el track de tipo ${kind}`);
+
+        const existing = producers.get(kind)
+        if (existing && !existing.closed) {
+            await existing.replaceTrack({ track })
+            console.log(`Producer ${kind} reutilizado con replaceTrack`)
+            return existing
+        }
+
         const producer = await sendTransport.produce({ track })
 
         producers.set(kind, producer)
@@ -449,25 +495,33 @@ const produceByKind = async (track, kind) => {
 
 const produce = async () => {
 
-    try {
-        //Crear SendTransport
-        await createSendTransport()
-        //Obtener tracks
-        const audioTrack = await getTrack("audio")
-        const videoTrack = await getTrack("video")
-        //Crear producers
-        await produceByKind(audioTrack, "audio")
-        await produceByKind(videoTrack, "video")
+    if (producePromise) return producePromise
 
-        console.log("Producers creados")
+    producePromise = (async () => {
+        try {
+            //Crear SendTransport
+            await createSendTransport()
+            //Obtener tracks
+            const localStream = await getLocalMediaStream()
+            const audioTrack = localStream.getAudioTracks()[0] || null
+            const videoTrack = localStream.getVideoTracks()[0] || null
+            //Crear producers
+            await produceByKind(audioTrack, "audio")
+            await produceByKind(videoTrack, "video")
 
-        return { audioTrack, videoTrack }
-    } catch (err) {
+            console.log("Producers creados")
 
-        console.error("Error al crear los producers. ", err)
-        throw err
-    }
+            return { audioTrack, videoTrack }
+        } catch (err) {
 
+            console.error("Error al crear los producers. ", err)
+            throw err
+        } finally {
+            producePromise = null
+        }
+    })()
+
+    return producePromise
 }
 
 

@@ -6,25 +6,29 @@ function RemoteVideo({ stream, videoEnabled, audioEnabled, username }) {
     const audioRef = useRef(null)
 
     useEffect(() => {
-        if (videoRef.current) {
-            if (stream && videoEnabled) {
-                if (videoRef.current.srcObject !== stream) videoRef.current.srcObject = stream
-            } else {
-                videoRef.current.srcObject = null
-            }
+        const videoEl = videoRef.current;
+        const audioEl = audioRef.current;
 
+        if (!stream) {
+            if (videoEl) videoEl.srcObject = null;
+            if (audioEl) audioEl.srcObject = null;
+            return;
         }
 
-        if (audioRef.current) {
-            if (stream && audioEnabled) {
-                if (audioRef.current.srcObject !== stream) audioRef.current.srcObject = stream
-            } else {
-                audioRef.current.srcObject = null
-            }
-
+        if (videoEl) {
+            videoEl.srcObject = stream;
+            videoEl.muted = true;
+            videoEl.playsInline = true;
+            videoEl.play().catch(() => { });
         }
-    }, [stream, videoEnabled, audioEnabled])
 
+        if (audioEl) {
+            audioEl.srcObject = stream;
+            audioEl.muted = !audioEnabled;
+            audioEl.playsInline = true;
+            audioEl.play().catch(() => { });
+        }
+    }, [stream, audioEnabled]);
 
     return (
 
@@ -35,7 +39,7 @@ function RemoteVideo({ stream, videoEnabled, audioEnabled, username }) {
                         ref={videoRef}
                         autoPlay
                         playsInline
-                        muted={!audioEnabled}
+                        muted={true}
                         className="w-full h-full object-cover"
                     />
                 ) : (

@@ -17,3 +17,8 @@ yarn-error.log*
 # Archivos del sistema
 .DS_Store
 Thumbs.db
+
+#Archivos para analisis RNF
+.scannerwork/
+Server/socket-test.yml
+sonar-project.properties

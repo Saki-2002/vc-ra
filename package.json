@@ -4,10 +4,12 @@
   "scripts": {
     "client": "npm run dev --prefix client",
     "server": "npm start --prefix server",
-    "dev": "concurrently \"npm run client\" \"npm run server\""
+    "dev": "concurrently \"npm run client\" \"npm run server\"",
+    "sonar": "sonar-scanner"
   },
   "devDependencies": {
-    "concurrently": "^9.0.0"
+    "concurrently": "^9.0.0",
+    "sonarqube-scanner": "^4.3.4"
   },
   "dependencies": {
     "mediasoup": "^3.19.3",

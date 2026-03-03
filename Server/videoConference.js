@@ -120,7 +120,7 @@ const createWebRtcTransport = async (roomId, socketId, direction) => {
     const transport = await router.createWebRtcTransport({
         listenIps: [{
             ip: "0.0.0.0",
-            announcedIp:"127.0.0.1"
+            announcedIp: "127.0.0.1"
             //announcedIp: process.env.PUBLIC_IP || "201.188.183.15"
         }],
         enableUdp: true,
@@ -330,9 +330,9 @@ async function handleVideoConference(io) {
         socket.on("isRoomAvailable", (roomCode, callback) => {
             try {
                 const available = !rooms.has(roomCode)
-                callback({available})
-            } catch(err) {
-                callback({error: err.message})
+                callback({ available })
+            } catch (err) {
+                callback({ error: err.message })
             }
         })
 
@@ -344,37 +344,52 @@ async function handleVideoConference(io) {
         // Ingresa al usuario al room
         //Envía: router.rtpCapabilities
         socket.on("joinRoom", async (roomId, username, isHost, callback) => {
-            //Obtener o crear room
-            const router = await findOrCreateRoom(roomId, socket.id)
-            socket.roomId = roomId
-            socket.join(roomId)
-            createPeer(socket, username, isHost)
-            console.log(`Usuario ${socket.id} ingreso a Room ${roomId}`)
+            try {
+                //Obtener o crear room
+                const router = await findOrCreateRoom(roomId, socket.id)
+                socket.roomId = roomId
+                socket.join(roomId)
+                createPeer(socket, username, isHost)
+                console.log(`Usuario ${socket.id} ingreso a Room ${roomId}`)
 
-            //Emitir lista de peers remotos actualizada
+                //Emitir lista de peers remotos actualizada
 
-            const room = rooms.get(roomId)
-            const peersInfo = (room?.peers || [])
-                .filter(id => id !== socket.id)
-                .map(id => {
-                    const p = peers.get(id)
-                    return {
-                        socketId: id,
-                        username: p?.userDetails?.username,
-                        isHost: p?.userDetails?.isHost
-                    }
+                const room = rooms.get(roomId)
+                const peersInfo = (room?.peers || [])
+                    .filter(id => id !== socket.id)
+                    .map(id => {
+                        const p = peers.get(id)
+                        return {
+                            socketId: id,
+                            username: p?.userDetails?.username,
+                            isHost: p?.userDetails?.isHost
+                        }
+                    })
+
+                socket.to(roomId).emit("peerJoined", {
+                    socketId: socket.id,
+                    username,
+                    isHost
                 })
 
-            socket.to(roomId).emit("peerJoined", {
-                socketId: socket.id,
-                username,
-                isHost
-            })
 
-            callback({
-                rtpCapabilities: router.rtpCapabilities,
-                peers: peersInfo
-            })
+                socket.emit("joinRoomSuccess", {
+                    success: true,
+                    roomId,
+                    timeStamp: Date.now(),
+                    message: "Ingreso a sala correcto"
+                })
+
+                if (callback) {
+                    callback({
+                        rtpCapabilities: router.rtpCapabilities,
+                        peers: peersInfo
+                    })
+                }
+            } catch (err) {
+                console.error("Error en joinRoom:", err)
+                if (callback) callback({ error: err.message })
+            }
         })
 
         //socket.on "createWebRtcTransport"

@@ -11,6 +11,7 @@ export default function useComments({ roomId, username, onCommentDataChange, com
     const selectedTagRef = useRef(null)
     const lastSelectionRef = useRef({ from: null, to: null })
 
+
     //Cambiar selección
     useEffect(() => {
         selectionRef.current = selection

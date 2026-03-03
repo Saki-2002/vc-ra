@@ -2,6 +2,7 @@ import fs from "fs"
 import path from "path"
 import { fileURLToPath } from "url"
 import { spawn } from "child_process"
+import { timeStamp } from "console"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -25,11 +26,11 @@ function handleCodeEditor(app, io) {
                 return res.status(400).json({ error: "Codigo vacio" })
             }
 
-            if(currentPythonProcess && !currentPythonProcess.killed) {
+            if (currentPythonProcess && !currentPythonProcess.killed) {
                 currentPythonProcess.kill()
             }
 
-            if(currentTmpFile && fs.existsSync(currentTmpFile)) {
+            if (currentTmpFile && fs.existsSync(currentTmpFile)) {
                 fs.unlinkSync(currentTmpFile)
             }
 
@@ -54,7 +55,7 @@ function handleCodeEditor(app, io) {
                 console.log("Proceso terminado")
             })
 
-            res.json({success: true})
+            res.json({ success: true })
 
         } catch (err) {
             return res.status(500).json({ error: err.message })
@@ -67,49 +68,62 @@ function handleCodeEditor(app, io) {
 
         socket.on("requestCurrentCode", (roomId, callback) => {
             const currentCode = roomsCode.get(roomId) || ""
-            callback({code: currentCode})
+            callback({ code: currentCode })
         })
 
         socket.on("requestCurrentComments", (roomId, callback) => {
             const currentComments = roomsComments.get(roomId) || []
-            callback({comments: currentComments})
+            callback({ comments: currentComments })
         })
 
         socket.on("input", (input) => {
-            if(currentPythonProcess){
+            if (currentPythonProcess) {
                 currentPythonProcess.stdin.write(input + "\n")
             }
         })
 
-        socket.on("codeChange", ({roomId, code}) => {
+        socket.on("codeChange", ({ roomId, code }) => {
             roomsCode.set(roomId, code)
-            socket.to(roomId).emit("codeChange", {code})
+            socket.to(roomId).emit("codeChange", { code })
+            socket.emit("codeChangeSuccess", {
+                success: true,
+                roomId,
+                timeStamp: Date.now(),
+                message: "Código actualizado"
+            })
         })
 
-        socket.on("addComment", ({roomId, comment}) => {
+        socket.on("addComment", ({ roomId, comment }) => {
             const comments = roomsComments.get(roomId) || []
             comments.push(comment)
             roomsComments.set(roomId, comments)
-            io.to(roomId).emit("commentAdded", {comment})
+            io.to(roomId).emit("commentAdded", { comment })
+
+            socket.emit("addCommentSuccess", {
+                success: true,
+                roomId,
+                timeStamp: Date.now(),
+                message: "Comentario agregado"
+            })
         })
 
-        socket.on("deleteComment", ({roomId, commentId}) => {
+        socket.on("deleteComment", ({ roomId, commentId }) => {
             const comments = roomsComments.get(roomId) || []
-            const filtered = comments.filter(c=> c.id !== commentId)
+            const filtered = comments.filter(c => c.id !== commentId)
             roomsComments.set(roomId, filtered)
 
-            io.to(roomId).emit("commentDeleted", {commentId})
+            io.to(roomId).emit("commentDeleted", { commentId })
         })
 
         socket.on("kill", () => {
-            if(currentPythonProcess && !currentPythonProcess.killed) {
+            if (currentPythonProcess && !currentPythonProcess.killed) {
                 currentPythonProcess.kill()
                 console.log("Ejecución cancelada")
                 io.emit("killed")
             }
         })
 
-        socket.on("sendReaction", ({roomId, reaction}) => {
+        socket.on("sendReaction", ({ roomId, reaction }) => {
             console.log(`Reacción ${reaction.tag} en ${roomId}`)
             io.to(roomId).emit("reactionReceived", { reaction })
         })

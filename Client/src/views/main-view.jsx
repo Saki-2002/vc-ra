@@ -1,7 +1,7 @@
 //======================
 //       IMPORTS
 //======================
-import { useRef } from "react"
+import { useRef, useMemo, useEffect } from "react"
 import "../App.css"
 import LocalVideo from "../components/local-video"
 import RemoteVideo from "../components/remote-video"
@@ -14,6 +14,7 @@ import Reactions from "../components/reactions"
 import useReactions from "../hooks/useReactions"
 import useRoom from "../hooks/useRoom"
 import useComments from "../hooks/useComments"
+import socket from "../logic/socketConnection"
 
 //======================
 //  FUNCION PRINCIPAL
@@ -60,6 +61,39 @@ function MainView() {
         handleReaction
     } = useReactions(roomId)
 
+    //Memoizar los remote videos para evitar re-renders
+    const remoteVideos = useMemo(() => {
+        return Array.from(remotePeers.entries()).map(([socketId, peerInfo]) => {
+            const tracks = remoteStreams.get(socketId) || {}
+            let stream = null
+
+            if (tracks.audioTrack || tracks.videoTrack) {
+                stream = new MediaStream()
+                if (tracks.audioTrack) stream.addTrack(tracks.audioTrack);
+                if (tracks.videoTrack) stream.addTrack(tracks.videoTrack);
+            }
+
+            const username = peerInfo?.username || `Peer-${String(socketId).slice(0, 6)}`
+
+            return (
+                <RemoteVideo
+                    key={socketId}
+                    stream={stream}
+                    videoEnabled={!!tracks.videoTrack}
+                    audioEnabled={!!tracks.audioTrack}
+                    username={username}
+                />
+            )
+        })
+    }, [remotePeers, remoteStreams])
+
+    useEffect(() => {
+        console.log("📊 remotePeers:", remotePeers)
+        console.log("📊 remoteStreams:", remoteStreams)
+        console.log("📊 remoteVideos length:", remoteVideos?.length)
+    }, [remotePeers, remoteStreams, remoteVideos])
+
+
     //======================
     //  VISTA HTML / CSS
     //======================
@@ -103,29 +137,7 @@ function MainView() {
                         </div>
                         <div className="bg-teal-900 w-2/5 rounded-2xl p-4 overflow-y-auto">
                             <div className="flex flex-wrap gap-2 h-1/6 ">
-                                {Array.from(remotePeers.entries()).map(([socketId, peerInfo]) => {
-                                    //Crear MediaStream por cada peer
-                                    const tracks = remoteStreams.get(socketId) || {}
-                                    let stream = null
-                                    if (tracks.audioTrack || tracks.videoTrack) {
-                                        stream = new MediaStream()
-                                        if (tracks.audioTrack) stream.addTrack(tracks.audioTrack);
-                                        if (tracks.videoTrack) stream.addTrack(tracks.videoTrack);
-
-                                    }
-
-                                    const username = peerInfo?.username || `Peer-${String(socketId).slice(0, 6)}`
-
-                                    return (
-                                        <RemoteVideo
-                                            key={socketId}
-                                            stream={stream}
-                                            videoEnabled={!!tracks.videoTrack}
-                                            audioEnabled={!!tracks.audioTrack}
-                                            username={username}
-                                        />
-                                    )
-                                })}
+                                {remoteVideos}
                             </div>
                         </div>
                     </div>
