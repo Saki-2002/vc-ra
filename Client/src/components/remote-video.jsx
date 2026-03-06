@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import PropTypes from "prop-types"
 
 function RemoteVideo({ stream, videoEnabled, audioEnabled, username }) {
 
@@ -58,11 +59,20 @@ function RemoteVideo({ stream, videoEnabled, audioEnabled, username }) {
             <div className="text-base mt-1 w-full text-center text-black font-semibold">
                 {username ?? "Peer"}
             </div>
-
         </div>
-
     )
+}
 
+RemoteVideo.propTypes = {
+    stream: PropTypes.object,
+    videoEnabled: PropTypes.bool.isRequired,
+    audioEnabled: PropTypes.bool.isRequired,
+    username: PropTypes.string
+}
+
+RemoteVideo.defaultProps = {
+    stream: null,
+    username: "Peer"
 }
 
 export default RemoteVideo

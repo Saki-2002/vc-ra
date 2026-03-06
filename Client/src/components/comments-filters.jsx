@@ -1,6 +1,7 @@
 import expressions from "../auxiliar/expressions"
+import PropTypes from "prop-types"
 
-function CommentsFilters({ comments, activeFilters, setActiveFilters, filteredComments}) {
+function CommentsFilters({ comments, activeFilters, setActiveFilters, filteredComments }) {
 
     const toggleFilter = (tag) => {
         setActiveFilters(prev => {
@@ -56,7 +57,31 @@ function CommentsFilters({ comments, activeFilters, setActiveFilters, filteredCo
             )}
         </div>
     )
+}
 
+CommentsFilters.propTypes = {
+    comments: PropTypes.arrayOf(
+        PropTypes.shape({
+            id: PropTypes.string.isRequired,
+            text: PropTypes.string,
+            tag: PropTypes.string,
+            codeSnippet: PropTypes.string,
+            username: PropTypes.string,
+            timestamp: PropTypes.number
+        })
+    ).isRequired,
+    activeFilters: PropTypes.arrayOf(PropTypes.string).isRequired,
+    setActiveFilters: PropTypes.func.isRequired,
+    filteredComments: PropTypes.arrayOf(
+        PropTypes.shape({
+            id: PropTypes.string.isRequired,
+            text: PropTypes.string,
+            tag: PropTypes.string,
+            codeSnippet: PropTypes.string,
+            username: PropTypes.string,
+            timestamp: PropTypes.number
+        })
+    ).isRequired
 }
 
 export default CommentsFilters

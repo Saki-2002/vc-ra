@@ -68,6 +68,7 @@ export default function useCodeEditor({ roomId, isHost, code, setCode, setSelect
     const executeCode = useCallback(async () => {
         if (isExecuting || !code.trim()) return
         await codeEditorConnection.runCode(code)
+        console.log("B")
     },[isExecuting, code])
 
 

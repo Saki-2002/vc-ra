@@ -1,6 +1,5 @@
 import expressions from "../auxiliar/expressions"
-import useReactions from "../hooks/useReactions"
-import useComments from "../hooks/useComments"
+import PropTypes from "prop-types"
 
 function CommentsToolbar({ setShowCommentInput, selection, setSelectedTag, handleReaction }) {
 
@@ -39,6 +38,21 @@ function CommentsToolbar({ setShowCommentInput, selection, setSelectedTag, handl
             </div>
         </div>
     )
+}
+
+CommentsToolbar.propTypes = {
+    setShowCommentInput: PropTypes.func.isRequired,
+    selection: PropTypes.shape({
+        text: PropTypes.string,
+        from: PropTypes.number,
+        to: PropTypes.number
+    }),
+    setSelectedTag: PropTypes.func.isRequired,
+    handleReaction: PropTypes.func.isRequired
+}
+
+CommentsToolbar.defaultProps = {
+    selection: null
 }
 
 export default CommentsToolbar

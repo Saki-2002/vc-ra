@@ -1,4 +1,5 @@
 import expressions from "../auxiliar/expressions"
+import PropTypes from "prop-types"
 
 function CommentBox({ comment, focusOnComment, handleDeleteComment, isHost }) {
 
@@ -45,7 +46,25 @@ function CommentBox({ comment, focusOnComment, handleDeleteComment, isHost }) {
             )}
         </div>
     )
-
 }
+
+CommentBox.propTypes = {
+    comment: PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        text: PropTypes.string,
+        tag: PropTypes.string,
+        codeSnippet: PropTypes.string,
+        username: PropTypes.string,
+        timestamp: PropTypes.number
+    }).isRequired,
+    focusOnComment: PropTypes.func,
+    handleDeleteComment: PropTypes.func.isRequired,
+    isHost: PropTypes.bool.isRequired
+}
+
+CommentBox.defaultProps = {
+    focusOnComment: null
+}
+
 
 export default CommentBox

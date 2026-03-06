@@ -1,12 +1,10 @@
 import { useState } from "react"
 import CommentsToolbar from "./comments-toolbar"
 import CommentsFilters from "./comments-filters"
-import useComments from "../hooks/useComments"
 import useCodeDecorations from "../hooks/useCodeDecorations"
-import useReactions from "../hooks/useReactions"
 import CommentBox from "./comment-box"
-import expressions from "../auxiliar/expressions"
 import CommentPopup from "./comment-popup"
+import PropTypes from "prop-types"
 
 function CommentsPanel({
     roomId,
@@ -103,6 +101,45 @@ function CommentsPanel({
 
         </>
     )
+}
+
+CommentsPanel.propTypes = {
+    roomId: PropTypes.string.isRequired,
+    username: PropTypes.string.isRequired,
+    onCommentDataChange: PropTypes.func,
+    comments: PropTypes.arrayOf(
+        PropTypes.shape({
+            id: PropTypes.string.isRequired,
+            text: PropTypes.string,
+            tag: PropTypes.string,
+            codeSnippet: PropTypes.string,
+            username: PropTypes.string,
+            timestamp: PropTypes.number
+        })
+    ).isRequired,
+    setComments: PropTypes.func.isRequired,
+    selectedTag: PropTypes.string,
+    setSelectedTag: PropTypes.func.isRequired,
+    isHost: PropTypes.bool.isRequired,
+    editorRef: PropTypes.oneOfType([
+        PropTypes.func,
+        PropTypes.shape({ current: PropTypes.any })
+    ]),
+    selection: PropTypes.shape({
+        text: PropTypes.string,
+        from: PropTypes.number,
+        to: PropTypes.number
+    }),
+    handleReaction: PropTypes.func.isRequired,
+    handleAddComment: PropTypes.func.isRequired,
+    handleDeleteComment: PropTypes.func.isRequired
+}
+
+CommentsPanel.defaultProps = {
+    onCommentDataChange: () => {},
+    selectedTag: null,
+    selection: null,
+    editorRef: null
 }
 
 export default CommentsPanel

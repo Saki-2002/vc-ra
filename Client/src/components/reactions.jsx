@@ -1,3 +1,5 @@
+import PropTypes from "prop-types"
+
 function Reactions({ items }) {
     return (
         <>
@@ -17,6 +19,18 @@ function Reactions({ items }) {
             ))}
         </>
     )
+}
+
+Reactions.propTypes = {
+    items: PropTypes.arrayOf(
+        PropTypes.shape({
+            id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+            emoji: PropTypes.string.isRequired,
+            x: PropTypes.number.isRequired,
+            y: PropTypes.number.isRequired,
+            tag: PropTypes.string
+        })
+    ).isRequired
 }
 
 export default Reactions

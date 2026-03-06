@@ -1,7 +1,7 @@
 //======================
 //		IMPORTS
 //======================
-import { useRef, useState } from "react"
+import PropTypes from "prop-types"
 import CodeMirror from "@uiw/react-codemirror"
 import { python } from "@codemirror/lang-python"
 import { EditorView } from "@codemirror/view"
@@ -9,8 +9,6 @@ import { EditorState } from "@codemirror/state"
 import EditorToolbar from "./editor-toolbar"
 import { commentField } from "./code-decorations"
 import useCodeEditor from "../hooks/useCodeEditor"
-import useComments from "../hooks/useComments"
-import useCodeDecorations from "../hooks/useCodeDecorations"
 
 //======================
 //  FUNCION PRINCIPAL
@@ -74,9 +72,25 @@ function CodeEditor({ roomId, isHost, username, code, setCode, editorRef, onComm
             </div>
         </div>
     )
+}
 
+CodeEditor.propTypes = {
+    roomId: PropTypes.string.isRequired,
+    isHost: PropTypes.bool.isRequired,
+    username: PropTypes.string.isRequired,
+    code: PropTypes.string.isRequired,
+    setCode: PropTypes.func.isRequired,
+    editorRef: PropTypes.oneOfType([
+        PropTypes.func,
+        PropTypes.shape({ current: PropTypes.any })
+    ]),
+    onCommentDataChange: PropTypes.func,
+    setSelection: PropTypes.func.isRequired
+}
 
-
+CodeEditor.defaultProps = {
+    onCommentDataChange: () => {},
+    editorRef: null
 }
 
 

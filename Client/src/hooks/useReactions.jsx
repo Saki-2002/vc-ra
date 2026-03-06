@@ -8,26 +8,39 @@ export default function useReactions(roomId) {
     const [floatingEmojis, setFloatingEmojis] = useState([])
     const usedReactionRef = useRef(false)
 
+    const removeEmojiAfterDelay = (id) => {
+        setTimeout(() => {
+            setFloatingEmojis(prev => prev.filter(e => e.id !== id))
+        }, 3000)
+    }
 
-    //showFloatingEmoji
-    //Muestra el Emoji Flotante
-    const showFloatingEmoji = useCallback((reaction) => {
-        console.log(expressions[reaction.tag]?.emoji)
+    const resetReactionCooldown = () => {
+        setTimeout(() => {
+            usedReactionRef.current = false
+        }, 2000)
+    }
+
+    const createNewEmoji = (reaction) => {
         const emoji = expressions[reaction.tag]?.emoji || "💬"
         const id = Date.now() + Math.random()
-        const newEmoji = {
+        return {
             id,
             emoji,
             tag: reaction?.tag,
             x: Math.random() * 70 + 15,
             y: Math.random() * 60 + 20
         }
+    }
 
+    //showFloatingEmoji
+    //Muestra el Emoji Flotante
+    const showFloatingEmoji = useCallback((reaction) => {
+        console.log(expressions[reaction.tag]?.emoji)
+        
+        const newEmoji = createNewEmoji(reaction)
         setFloatingEmojis(prev => [...prev, newEmoji])
 
-        setTimeout(() => {
-            setFloatingEmojis(prev => prev.filter(e => e.id !== id))
-        }, 3000)
+        removeEmojiAfterDelay(newEmoji.id)
     }, [])
 
     //handleReaction
@@ -44,9 +57,7 @@ export default function useReactions(roomId) {
         handleConnection.emitReaction(roomId, { tag })
 
         //Luego de 2 segundos, se permite enviar otra reacción
-        setTimeout(() => {
-            usedReactionRef.current = false
-        }, 2000)
+        resetReactionCooldown()
     }, [roomId])
 
     //Setup Listener, para mostrarla a todos los participantes

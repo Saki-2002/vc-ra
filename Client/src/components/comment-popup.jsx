@@ -1,4 +1,5 @@
 import expressions from "../auxiliar/expressions"
+import PropTypes from "prop-types"
 
 function CommentPopup({
     selectedTag,
@@ -74,6 +75,25 @@ function CommentPopup({
             }
         </>
     )
+}
+
+CommentPopup.propTypes = {
+    selectedTag: PropTypes.string,
+    selection: PropTypes.shape({
+        text: PropTypes.string,
+        from: PropTypes.number,
+        to: PropTypes.number
+    }),
+    commentText: PropTypes.string.isRequired,
+    setCommentText: PropTypes.func.isRequired,
+    showCommentInput: PropTypes.bool.isRequired,
+    setShowCommentInput: PropTypes.func.isRequired,
+    handleAddComment: PropTypes.func.isRequired
+}
+
+CommentPopup.defaultProps = {
+    selectedTag: null,
+    selection: null
 }
 
 export default CommentPopup

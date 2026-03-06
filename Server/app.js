@@ -2,7 +2,7 @@ import express from "express"
 import http from "http"
 import { Server } from "socket.io"
 import handleVideoConference from "./videoConference.js"
-import handleCodeEditor from "./codeEditor&comments.js"
+import handleCodeEditor from "./codeEditorComments.js"
 import cors from "cors"
 
 

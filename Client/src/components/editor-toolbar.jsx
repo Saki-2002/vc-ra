@@ -1,3 +1,5 @@
+import PropTypes from "prop-types"
+
 function EditorToolbar({ isExecuting, onExecute }) {
     return (
         <div className="bg-gray-800 p-2 flex justify-between items-center">
@@ -12,6 +14,11 @@ function EditorToolbar({ isExecuting, onExecute }) {
             </button>
         </div>
     )
+}
+
+EditorToolbar.propTypes = {
+    isExecuting: PropTypes.bool.isRequired,
+    onExecute: PropTypes.func.isRequired
 }
 
 export default EditorToolbar

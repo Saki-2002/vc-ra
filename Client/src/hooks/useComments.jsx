@@ -11,6 +11,13 @@ export default function useComments({ roomId, username, onCommentDataChange, com
     const selectedTagRef = useRef(null)
     const lastSelectionRef = useRef({ from: null, to: null })
 
+    const handleCommentAdded = useCallback((comment) => {
+        setComments(prev => [...prev, comment])
+    }, [setComments])
+
+    const handleCommentDeleted = useCallback((commentId) => {
+        setComments(prev => prev.filter(c => c.id !== commentId))
+    }, [setComments])
 
     //Cambiar selección
     useEffect(() => {
@@ -32,8 +39,8 @@ export default function useComments({ roomId, username, onCommentDataChange, com
     useEffect(() => {
 
         codeEditorConnection.setupCommentListeners(
-            (comment) => setComments(prev => [...prev, comment]),
-            (commentId) => setComments(prev => prev.filter(c => c.id !== commentId))
+            handleCommentAdded,
+            handleCommentDeleted
         )
 
         return () => {
@@ -50,7 +57,7 @@ export default function useComments({ roomId, username, onCommentDataChange, com
             return
         }
 
-        const effectiveTag = currentSelectedTag.current || tag || null
+        const effectiveTag = currentSelectedTag || tag || null
         const finalText = commentText.trim() || ""
 
         const newComment = {
@@ -75,7 +82,7 @@ export default function useComments({ roomId, username, onCommentDataChange, com
     const handleDeleteComment = useCallback((commentId) => {
         codeEditorConnection.emitDeleteComment(roomId, commentId)
     }, [roomId])
-    
+
     return {
         handleAddComment,
         handleDeleteComment,

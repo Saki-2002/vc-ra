@@ -12,7 +12,10 @@ function useLocalVideo() {
     const produceFirstTime = async () => {
         try {
 
-            const { audioTrack, videoTrack } = await videoConferenceConnection.produce()
+            const result = await videoConferenceConnection.produce()
+
+            // ✅ Manejar undefined o null
+            const { audioTrack, videoTrack } = result || {}
 
             const stream = new MediaStream()
 
@@ -83,7 +86,7 @@ function useLocalVideo() {
 
     useEffect(() => {
         return () => {
-            if(localStream) {
+            if (localStream) {
                 localStream.getTracks().forEach((t) => t.stop())
             }
         }

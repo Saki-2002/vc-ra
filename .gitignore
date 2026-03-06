@@ -22,3 +22,14 @@ Thumbs.db
 .scannerwork/
 Server/socket-test.yml
 sonar-project.properties
+
+#Archivos de Testing
+Client/coverage/
+Client/test/
+Client/vitest.config.js
+Server/coverage/
+Server/test/
+Server/vitest.config.js
+
+#Artillery
+Server/reports

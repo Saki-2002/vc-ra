@@ -1,8 +1,5 @@
 import * as mediasoup from "mediasoup-client"
-//import { useRef } from "react"
 import socket from "../logic/socketConnection"
-
-//const socket = io("https://4f4mbq09-5000.brs.devtunnels.ms/")
 
 //======================
 //  VARIABLES GLOBALES
@@ -56,36 +53,196 @@ const iceServers = [
 ]
 
 //======================
-//      FUNCIONES
+//  FUNCIONES AUXILIARES (extraídas para reducir anidamiento)
 //======================
 
+// ✅ Manejar callbacks del connectTransport
+const handleConnectTransportCallback = (callback, errback, resp) => {
+    if (!resp || resp.error) return errback(resp?.error)
+    callback()
+}
 
-//(async) joinRoom
-//Entradas: roomId, username, isHost
-//Uso: Emite al server "joinRoom" (roomId, username, isHost). Luego
-// guarda información y el rtpCapabilities para finalmente crear el Device
-// y cargarlo.
-// Salida: Promise resolve o reject
+// ✅ Manejar callbacks del produce
+const handleProduceCallback = (callback, errback, resp) => {
+    if (!resp || resp.error) return errback(new Error(resp?.error))
+    callback({ id: resp.id })
+}
+
+// ✅ Procesar respuesta de createWebRtcTransport para recv
+const handleRecvTransportResponse = (res, resolve, reject) => {
+    if (!res || res.error) {
+        recvTransportPromise = null
+        return reject(new Error(`Error en createWebRtcTransport: ${res?.error}`))
+    }
+
+    try {
+        recvTransport = deviceGlobal.createRecvTransport({
+            ...res,
+            iceServers
+        })
+
+        recvTransport.on("connect", async ({ dtlsParameters }, callback, errback) => {
+            socket.emit("connectTransport", {
+                transportId: recvTransport.id,
+                dtlsParameters
+            }, (resp) => handleConnectTransportCallback(callback, errback, resp))
+        })
+
+        console.log("RecvTransport creado")
+        resolve(recvTransport)
+    } catch (err) {
+        reject(err)
+    } finally {
+        recvTransportPromise = null
+    }
+}
+
+// ✅ Procesar respuesta de createWebRtcTransport para send
+const handleSendTransportResponse = (res, resolve, reject) => {
+    if (!res || res.error) {
+        sendTransportPromise = null
+        return reject(new Error(`Error en createWebRtcTransport: ${res?.error}`))
+    }
+
+    try {
+        sendTransport = deviceGlobal.createSendTransport({
+            ...res,
+            iceServers
+        })
+
+        sendTransport.on("connect", async ({ dtlsParameters }, callback, errback) => {
+            socket.emit("connectTransport", {
+                transportId: sendTransport.id,
+                dtlsParameters
+            }, (resp) => handleConnectTransportCallback(callback, errback, resp))
+        })
+
+        sendTransport.on("produce", async ({ kind, rtpParameters }, callback, errback) => {
+            socket.emit("produce", {
+                transportId: sendTransport.id,
+                kind,
+                rtpParameters
+            }, (resp) => handleProduceCallback(callback, errback, resp))
+        })
+
+        console.log("SendTransport creado")
+        resolve(sendTransport)
+    } catch (err) {
+        reject(err)
+    } finally {
+        sendTransportPromise = null
+    }
+}
+
+// ✅ Manejar nuevos producers
+const handleNewProducerEvent = async ({ producerId, socketId, kind }) => {
+    console.log(`Nuevo producer detectado: ${kind} de ${socketId}`)
+
+    try {
+        await consumeTrack(producerId)
+        saveMediaFromConsumers()
+
+        if (onMediaTracksUpdate) {
+            onMediaTracksUpdate(new Map(mediaTracks))
+        }
+    } catch (err) {
+        console.error("Error al consumir nuevo producer", err)
+    }
+}
+
+// ✅ Manejar peer desconectado
+const handlePeerDisconnectedEvent = ({ socketId }) => {
+    console.log("Peer desconectado")
+
+    try {
+        const consumersToRemove = []
+        consumers.forEach((c, cId) => {
+            if (c.appData?.socketId === socketId) {
+                consumersToRemove.push(cId)
+            }
+        })
+
+        consumersToRemove.forEach(cId => {
+            const consumer = consumers.get(cId)
+            if (consumer) {
+                consumer.close()
+                consumers.delete(cId)
+                console.log(`Consumer ${cId} eliminado`)
+            }
+        })
+
+        mediaTracks.delete(socketId)
+        peersMap.delete(socketId)
+
+        if (onPeersUpdate) {
+            onPeersUpdate(new Map(peersMap))
+        }
+
+        if (onMediaTracksUpdate) {
+            onMediaTracksUpdate(new Map(mediaTracks))
+        }
+    } catch (err) {
+        console.error("Error al manejar desconexión", err)
+    }
+}
+
+// ✅ Marcar producer como pausado
+const markProducerPaused = (producerId) => {
+    consumers.forEach((consumer) => {
+        if (consumer.producerId === producerId) {
+            consumer.producerPaused = true
+            console.log(`Consumer ${consumer.id} marcado como pausado`)
+        }
+    })
+}
+
+// ✅ Marcar producer como activo
+const markProducerActive = (producerId) => {
+    consumers.forEach((consumer) => {
+        if (consumer.producerId === producerId) {
+            consumer.producerPaused = false
+            console.log(`Consumer ${consumer.id} marcado como activo`)
+        }
+    })
+}
+
+// ✅ Manejar pausa de producer
+const handleProducerPausedEvent = ({ socketId, producerId, kind }) => {
+    console.log(`Producer pausado: ${kind} de ${socketId}`)
+    markProducerPaused(producerId)
+    saveMediaFromConsumers()
+    if (onMediaTracksUpdate) onMediaTracksUpdate(new Map(mediaTracks))
+}
+
+// ✅ Manejar reanudación de producer
+const handleProducerResumedEvent = ({ socketId, producerId, kind }) => {
+    console.log(`Producer reanudado: ${kind} de ${socketId}`)
+    markProducerActive(producerId)
+    saveMediaFromConsumers()
+    if (onMediaTracksUpdate) onMediaTracksUpdate(new Map(mediaTracks))
+}
+
+//======================
+//      FUNCIONES PÚBLICAS
+//======================
+
 const joinRoom = async (roomId, username, isHost) => {
     return new Promise((resolve, reject) => {
         socket.emit("joinRoom", roomId, username, isHost, async (res) => {
             if (!res || res.error)
                 return reject(new Error(`Error en socket.emit(joinRoom), ${res?.error}`))
             try {
-                //Guardar Información
                 currentRoomId = roomId
                 currentUsername = username
                 currentIsHost = isHost
                 const routerRtpCapabilities = res.rtpCapabilities
 
-                //Inicializar peers con lo que envía el server
                 peersMap.clear()
                 for (const p of (res.peers || [])) {
                     peersMap.set(p.socketId, { username: p.username, isHost: p.isHost })
                 }
                 if (onPeersUpdate) onPeersUpdate(new Map(peersMap))
 
-                //Crear el Device y Cargarlo
                 deviceGlobal = new mediasoup.Device()
                 await deviceGlobal.load({ routerRtpCapabilities })
                 console.log("Device creado y cargado")
@@ -143,101 +300,17 @@ const setupNewProducerListener = () => {
     socket.off("producerPaused")
     socket.off("producerResumed")
 
-    socket.on("newProducer", async ({ producerId, socketId, kind }) => {
-        console.log(`Nuevo producer detectado: ${kind} de ${socketId}`)
-
-        try {
-            await consumeTrack(producerId)
-            saveMediaFromConsumers()
-
-            if (onMediaTracksUpdate) {
-                onMediaTracksUpdate(new Map(mediaTracks))
-            }
-        } catch (err) {
-            console.error("Error al consumir nuevo producer", err)
-        }
-    })
-
+    socket.on("newProducer", handleNewProducerEvent)
     socket.on("peerJoined", ({ socketId, username, isHost }) => {
         peersMap.set(socketId, { username, isHost })
         if (onPeersUpdate) onPeersUpdate(new Map(peersMap))
     })
-
-    socket.on("peerDisconnected", ({ socketId }) => {
-        console.log("Peer desconectado")
-
-
-        try {
-            const consumersToRemove = []
-            consumers.forEach((c, cId) => {
-                if (c.appData?.socketId === socketId) {
-                    consumersToRemove.push(cId)
-                }
-            })
-
-            consumersToRemove.forEach(cId => {
-                const consumer = consumers.get(cId)
-                if (consumer) {
-                    consumer.close()
-                    consumers.delete(cId)
-                    console.log(`Consumer ${cId} eliminado`)
-                }
-            })
-
-            mediaTracks.delete(socketId)
-            console.log(`Peer ${socketId} eliminado`)
-
-            peersMap.delete(socketId)
-            if (onPeersUpdate) {
-                onPeersUpdate(new Map(peersMap))
-            }
-
-            if (onMediaTracksUpdate) {
-                onMediaTracksUpdate(new Map(mediaTracks))
-            }
-        } catch (err) {
-            console.error("Error al manejar desconexión")
-        }
-    })
-
-
-    socket.on("producerPaused", ({ socketId, producerId, kind }) => {
-        console.log(`Producer pausado: ${kind} de ${socketId}`)
-
-        // Buscar el consumer correspondiente y marcarlo como pausado
-
-        consumers.forEach((consumer) => {
-            if (consumer.producerId === producerId) {
-                consumer.producerPaused = true
-                console.log(`Consumer ${consumer.id} marcado como pausado`)
-            }
-        })
-
-
-        saveMediaFromConsumers()
-        if (onMediaTracksUpdate) onMediaTracksUpdate(new Map(mediaTracks))
-    })
-
-    socket.on("producerResumed", ({ socketId, producerId, kind }) => {
-        console.log(`Producer reanudado: ${kind} de ${socketId}`)
-
-        // Buscar el consumer correspondiente y desmarcarlo
-
-        consumers.forEach((consumer) => {
-            if (consumer.producerId === producerId) {
-                consumer.producerPaused = false
-                console.log(`Consumer ${consumer.id} marcado como activo`)
-            }
-        })
-
-
-        saveMediaFromConsumers()
-        if (onMediaTracksUpdate) onMediaTracksUpdate(new Map(mediaTracks))
-    })
+    socket.on("peerDisconnected", handlePeerDisconnectedEvent)
+    socket.on("producerPaused", handleProducerPausedEvent)
+    socket.on("producerResumed", handleProducerResumedEvent)
 }
 
 const createRecvTransport = async () => {
-
     if (recvTransport) {
         console.log("RecvTransport ya existe. Reutilizando")
         return recvTransport
@@ -249,48 +322,15 @@ const createRecvTransport = async () => {
     }
 
     recvTransportPromise = new Promise((resolve, reject) => {
-
-        //Create RecvTransport
         socket.emit("createWebRtcTransport",
             { roomId: currentRoomId, direction: "recv" },
-            async (res) => {
-                if (!res || res.error) {
-                    recvTransportPromise = null
-                    return reject(new Error(`Error en socket.emit(createWebRtcTrnasport), ${res?.error}`))
-                }
-                try {
-                    //Create RecvTransport
-                    recvTransport = deviceGlobal.createRecvTransport({
-                        ...res,
-                        iceServers
-                    })
-
-                    recvTransport.on("connect", async ({ dtlsParameters }, callback, errback) => {
-                        socket.emit("connectTransport", {
-                            transportId: recvTransport.id,
-                            dtlsParameters
-                        },
-                            (resp) => {
-                                if (!resp || resp.error) return errback(resp?.error);
-                                callback()
-                            })
-                    })
-
-                    console.log("RecvTransport creado")
-                    resolve(recvTransport)
-                } catch (err) {
-                    reject(err)
-                } finally {
-                    recvTransportPromise = null
-                }
-            }
+            (res) => handleRecvTransportResponse(res, resolve, reject)
         )
     })
     return recvTransportPromise
 }
 
 const createSendTransport = async () => {
-
     if (sendTransport) {
         console.log("SendTransport ya existe. Reutilizando")
         return sendTransport
@@ -302,56 +342,13 @@ const createSendTransport = async () => {
     }
 
     sendTransportPromise = new Promise((resolve, reject) => {
-        //Create SendTransport
-
         socket.emit("createWebRtcTransport",
             { roomId: currentRoomId, direction: "send" },
-            async (res) => {
-                if (!res || res.error) {
-                    sendTransportPromise = null
-                    return reject(new Error(`Error en socket.emit(createWebRtcTrnasport), ${res?.error}`))
-                }
-                try {
-                    //Create SendTransport
-                    sendTransport = deviceGlobal.createSendTransport({
-                        ...res,
-                        iceServers
-                    })
-
-                    sendTransport.on("connect", async ({ dtlsParameters }, callback, errback) => {
-                        socket.emit("connectTransport", {
-                            transportId: sendTransport.id,
-                            dtlsParameters
-                        },
-                            (resp) => {
-                                if (!resp || resp.error) return errback(resp?.error);
-                                callback()
-                            })
-                    })
-
-                    sendTransport.on("produce", async ({ kind, rtpParameters }, callback, errback) => {
-                        socket.emit("produce", {
-                            transportId: sendTransport.id,
-                            kind,
-                            rtpParameters
-                        }, (resp) => {
-                            if (!resp || resp.error) return errback(new Error(resp?.error));
-                            callback({ id: resp.id })
-                        })
-                    })
-                    console.log("SendTransport creado")
-                    resolve(sendTransport)
-                } catch (err) {
-                    reject(err)
-                } finally {
-                    sendTransportPromise = null
-                }
-            }
+            (res) => handleSendTransportResponse(res, resolve, reject)
         )
     })
 
     return sendTransportPromise
-
 }
 
 const getProducers = async () => {
@@ -402,7 +399,7 @@ const consumeTrack = async (pId) => {
                     await consumer.resume().catch(() => { })
                 }
 
-                socket.emit("resumeConsumer", { consumerId: consumer.id }, () => {})
+                socket.emit("resumeConsumer", { consumerId: consumer.id }, () => { })
 
                 console.log("After await recvTransportConsume")
                 consumers.set(consumer.id, consumer)
@@ -416,14 +413,12 @@ const consumeTrack = async (pId) => {
 }
 
 const saveMediaFromConsumers = () => {
-
-    //mediaTracks = Map (socketId, {videoTrack, audioTrack})
     mediaTracks.clear()
     consumers.forEach(c => {
         const socketId = c.appData?.socketId
         if (!socketId) return;
 
-        const producerPaused = c.producerPaused === true || c.producerPaused === true
+        const producerPaused = c.producerPaused === true
 
         if (!mediaTracks.has(socketId)) {
             mediaTracks.set(socketId, {
@@ -436,28 +431,36 @@ const saveMediaFromConsumers = () => {
 
         if (c.track && c.track.readyState === "live") {
             c.track.enabled = true
+
+            if (c.kind === "video") {
+                media.videoTrack = producerPaused ? null : c.track
+            } else if (c.kind === "audio") {
+                media.audioTrack = producerPaused ? null : c.track
+            }
+        } else {
+
+            if (c.kind === "video") {
+                media.videoTrack = null
+            } else if (c.kind === "audio") {
+                media.audioTrack = null
+            }
         }
 
-        if (c.kind === "video") {
-            media.videoTrack = producerPaused ? null : c.track
-        } else if (c.kind === "audio") {
-            media.audioTrack = producerPaused ? null : c.track
-        }
 
     });
 }
 
 const createConsumers = async () => {
     try {
-        //Crear y conectar Transport
-        //Obtener Producers
-        //For Crear consumers
         await createRecvTransport()
         await getProducers()
         for (const pId of remoteProducersIds) {
             await consumeTrack(pId)
         }
-        saveMediaFromConsumers() //Se obtiene mediaTracks
+        saveMediaFromConsumers()
+        if (onMediaTracksUpdate) {
+            onMediaTracksUpdate(new Map(mediaTracks))
+        }
     } catch (err) {
         throw err
     }
@@ -468,9 +471,7 @@ const getMediaTracks = () => {
 }
 
 const produceByKind = async (track, kind) => {
-
     try {
-
         if (!track) throw new Error(`No existe el track de tipo ${kind}`);
 
         const existing = producers.get(kind)
@@ -481,12 +482,10 @@ const produceByKind = async (track, kind) => {
         }
 
         const producer = await sendTransport.produce({ track })
-
         producers.set(kind, producer)
         console.log(`Producer de tipo ${kind} creado`)
 
         return producer
-
     } catch (err) {
         console.error(`Error al producir media de tipo ${kind}. `, err)
         throw err
@@ -494,18 +493,15 @@ const produceByKind = async (track, kind) => {
 }
 
 const produce = async () => {
-
     if (producePromise) return producePromise
 
     producePromise = (async () => {
         try {
-            //Crear SendTransport
             await createSendTransport()
-            //Obtener tracks
             const localStream = await getLocalMediaStream()
             const audioTrack = localStream.getAudioTracks()[0] || null
             const videoTrack = localStream.getVideoTracks()[0] || null
-            //Crear producers
+
             await produceByKind(audioTrack, "audio")
             await produceByKind(videoTrack, "video")
 
@@ -513,7 +509,6 @@ const produce = async () => {
 
             return { audioTrack, videoTrack }
         } catch (err) {
-
             console.error("Error al crear los producers. ", err)
             throw err
         } finally {
@@ -524,17 +519,13 @@ const produce = async () => {
     return producePromise
 }
 
-
 const getTrack = async (kind) => {
-
     try {
         const option = kind === "audio"
             ? { audio: true }
             : { video: { width: 1280, height: 720 } }
 
-
         const stream = await navigator.mediaDevices.getUserMedia(option)
-
         const track = kind === "audio"
             ? stream.getAudioTracks()[0]
             : stream.getVideoTracks()[0]
@@ -542,14 +533,11 @@ const getTrack = async (kind) => {
         if (!track) throw new Error(`No se pudo obtener el track de tipo ${kind}`)
 
         return track
-
     } catch (err) {
         console.error(`Error al obtener el track de tipo ${kind}.`, err)
         throw err
     }
-
 }
-
 
 const toggleAudio = async () => {
     const producer = producers.get("audio")
@@ -567,7 +555,6 @@ const toggleAudio = async () => {
                         console.error("Error al reanudar audio")
                         return reject(res?.error)
                     }
-
                     producer.resume()
                     console.log("Audio reanudado")
                     resolve({ success: true, state: true })
@@ -605,7 +592,6 @@ const toggleVideo = async () => {
                         console.error("Error al reanudar video")
                         return reject(res?.error)
                     }
-
                     producer.resume()
                     console.log("Video reanudado")
                     resolve({ success: true, state: true })
@@ -635,7 +621,6 @@ const isRoomAvailable = async (roomCode) => {
         })
     })
 }
-
 
 export {
     joinRoom,
